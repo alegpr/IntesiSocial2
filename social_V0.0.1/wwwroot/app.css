@@ -14,10 +14,10 @@
 html, body {
     margin: 0;
     padding: 0;
-    height: 100vh;
+    min-height: 100vh;
     width: 100vw;
-    overflow: hidden; /* Blocca lo scroll della finestra principale */
-}
+    overflow-x: hidden;
+    overflow-y: auto;
 
 /* Contenitore principale con gradiente dinamico */
 .main-container {

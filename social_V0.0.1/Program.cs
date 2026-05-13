@@ -7,9 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- REGISTRAZIONE DEI SERVIZI (Dependency Injection) ---
 
-// Gestione della sessione utente e servizi applicativi
-builder.Services.AddScoped<SessionService>();
-builder.Services.AddScoped<PostService>();
+// Cambiato in Singleton per mantenere i dati dell'utente loggato tra le pagine
+builder.Services.AddSingleton<SessionService>();
+builder.Services.AddSingleton<PostService>();
 
 // Supporto per componenti Razor e Rendering Interattivo (Server-side)
 builder.Services.AddRazorComponents()
@@ -19,7 +19,6 @@ builder.Services.AddRazorComponents()
 builder.Services.AddRadzenComponents();
 
 // Configurazione della connessione SQL tramite Dapper
-// Utilizza la stringa di connessione definita in appsettings.json
 builder.Services.AddScoped(sp =>
     new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -42,7 +41,7 @@ app.UseStaticFiles();
 // Protezione contro attacchi Cross-Site Request Forgery (CSRF)
 app.UseAntiforgery();
 
-// Ottimizzazione del caricamento degli asset statici (Nuovo in .NET 9)
+// Ottimizzazione del caricamento degli asset statici (Funzionalità .NET 9)
 app.MapStaticAssets();
 
 // Configurazione del componente root 'App' e attivazione della modalità interattiva

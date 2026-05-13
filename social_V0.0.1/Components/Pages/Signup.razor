@@ -1,67 +1,61 @@
 ﻿@page "/signup"
 @using Microsoft.Data.SqlClient
 @using Dapper
-@using BCrypt.Net
 @using social_V0._0._1.Models
 @using System.IO
+@using Radzen
+@using Radzen.Blazor
+@using Microsoft.AspNetCore.Components.Forms
+
 @inject IConfiguration Config
 @inject NavigationManager NavManager
 @inject IWebHostEnvironment Env
 @rendermode InteractiveServer
 
 <RadzenCard class="rz-shadow-10 rz-p-12"
-            style="max-width: 600px; width: 90%; border-radius: var(--brand-radius); background-color: white; margin-top: 20px; margin-bottom: 50px;">
+            style="max-width: 600px; width: 90%; border-radius: 8px; background-color: white; margin: 20px auto 50px auto;">
     
-    @* Titolo della pagina di registrazione *@
-    <RadzenText TextStyle="TextStyle.H4"
-                TextAlign="TextAlign.Center"
-                Style="font-weight: 800; color: var(--brand-primary); margin-bottom: 2rem; letter-spacing: -1px;">
+    <RadzenText TextStyle="TextStyle.H4" TextAlign="TextAlign.Center"
+                Style="font-weight: 800; color: #4340da; margin-bottom: 2rem;">
         Registrazione
     </RadzenText>
 
-    @* Feedback visivo per errori o conferma registrazione *@
     @if (!string.IsNullOrEmpty(messaggio))
     {
-        <RadzenAlert AlertStyle="@(successo ? AlertStyle.Success : AlertStyle.Danger)"
-                     Variant="Variant.Flat"
-                     Class="rz-mb-4">
+        <RadzenAlert AlertStyle="@(successo ? AlertStyle.Success : AlertStyle.Danger)" Variant="Variant.Flat" Class="rz-mb-4">
             @messaggio
         </RadzenAlert>
     }
 
-    @* Form di inserimento dati basato sul modello Utente *@
     <RadzenTemplateForm TItem="Utente" Data="@nuovoUtente" Submit="@OnSignup">
         <RadzenStack Gap="1.5rem">
             
-            @* Sezione Nome e Cognome *@
             <RadzenRow>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Nome *" Style="width:100%">
                         <RadzenTextBox @bind-Value="@nuovoUtente.Nome" Name="Nome" Style="width: 100%;" />
-                        <RadzenRequiredValidator Component="Nome" Text="Il nome è richiesto" />
+                        <RadzenRequiredValidator Component="Nome" Text="Richiesto" />
                     </RadzenFormField>
                 </RadzenColumn>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Cognome *" Style="width:100%">
                         <RadzenTextBox @bind-Value="@nuovoUtente.Cognome" Name="Cognome" Style="width: 100%;" />
-                        <RadzenRequiredValidator Component="Cognome" Text="Il cognome è richiesto" />
+                        <RadzenRequiredValidator Component="Cognome" Text="Richiesto" />
                     </RadzenFormField>
                 </RadzenColumn>
             </RadzenRow>
 
-            @* Credenziali di accesso *@
             <RadzenFormField Text="Email *" Style="width:100%">
                 <RadzenTextBox @bind-Value="@nuovoUtente.Email" Name="Email" Style="width: 100%;" />
-                <RadzenRequiredValidator Component="Email" Text="L'email è richiesta" />
-                <RadzenEmailValidator Component="Email" Text="Inserisci un formato email valido" />
+                <RadzenRequiredValidator Component="Email" Text="Email richiesta" />
+                <RadzenEmailValidator Component="Email" Text="Formato non valido" />
             </RadzenFormField>
 
             <RadzenFormField Text="Password *" Style="width:100%">
                 <RadzenPassword @bind-Value="@nuovoUtente.Password" Name="Password" Style="width: 100%;" />
-                <RadzenRequiredValidator Component="Password" Text="La password è richiesta" />
+                <RadzenRequiredValidator Component="Password" Text="Password richiesta" />
             </RadzenFormField>
 
-            @* Informazioni aziendali e personali *@
             <RadzenRow>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Dipartimento" Style="width:100%">
@@ -70,33 +64,28 @@
                 </RadzenColumn>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Data di Nascita" Style="width:100%">
-                        <RadzenDatePicker @bind-Value="@nuovoUtente.DataDiNascita" DateFormat="dd/MM/yyyy" ShowTime="false" Style="width:100%" />
+                        <RadzenDatePicker @bind-Value="@nuovoUtente.DataDiNascita" DateFormat="dd/MM/yyyy" Style="width:100%" />
                     </RadzenFormField>
                 </RadzenColumn>
             </RadzenRow>
 
-            @* Caricamento foto profilo *@
-            <RadzenText TextStyle="TextStyle.Subtitle2" Style="color: #65676b; margin-top: 10px;">Foto Profilo (Opzionale)</RadzenText>
-            <RadzenUpload ChooseText="Seleziona Foto" Accept="image/*" Auto="false" Multiple="false" Change="@OnUploadChange" Style="width: 100%" />
+            <RadzenText TextStyle="TextStyle.Subtitle2" Style="color: #65676b;">Foto Profilo (Opzionale)</RadzenText>
+            <div style="border: 1px dashed #ccc; padding: 10px; border-radius: 4px;">
+                <InputFile OnChange="@OnInputFileChange" class="form-control" accept="image/*" />
+            </div>
 
-            @* Accettazione termini e condizioni (Obbligatorio) *@
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Style="margin-top: 10px;">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <RadzenCheckBox @bind-Value="@accettaTermini" Name="EULA" TValue="bool" />
-                <RadzenLabel Component="EULA" Style="font-size: 0.9rem; color: #65676b;">
-                    Accetto i <a href="/eula" target="_blank" style="color: var(--brand-action); text-decoration: none; font-weight: bold;">termini e le condizioni</a>
+                <RadzenLabel Component="EULA" Style="font-size: 0.9rem;">
+                    Accetto i <a href="/eula" target="_blank" style="color: #0561ff; font-weight: bold;">termini e condizioni</a>
                 </RadzenLabel>
             </RadzenStack>
 
-            @* Pulsanti di azione *@
-            <RadzenButton ButtonType="ButtonType.Submit"
-                          Text="REGISTRATI"
-                          Disabled="@(!accettaTermini)"
-                          Style="width: 100%; background-color: var(--brand-primary); font-weight: bold; height: 48px; border-radius: var(--brand-radius); margin-top: 10px;" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="REGISTRATI" Disabled="@(!accettaTermini)"
+                          Style="width: 100%; background-color: #4340da; font-weight: bold; height: 48px;" />
             
-            <RadzenButton ButtonStyle="ButtonStyle.Light"
-                          Text="TORNA AL LOGIN"
-                          Click="@(() => NavManager.NavigateTo("/login"))"
-                          Style="width: 100%; height: 48px; border-radius: var(--brand-radius);" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Text="TORNA AL LOGIN"
+                          Click="@(() => NavManager.NavigateTo("/login"))" Style="width: 100%; height: 48px;" />
         </RadzenStack>
     </RadzenTemplateForm>
 </RadzenCard>
@@ -105,60 +94,74 @@
     private Utente nuovoUtente = new Utente();
     private string messaggio = "";
     private bool successo = false;
-    private string? nomeFile;
     private bool accettaTermini = false;
+    
+    // File nativo di Blazor
+    private IBrowserFile? fileCaricato;
 
-    /// <summary>
-    /// Cattura il nome del file selezionato durante l'upload della foto.
-    /// </summary>
-    void OnUploadChange(UploadChangeEventArgs args) => nomeFile = args.Files.FirstOrDefault()?.Name;
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        fileCaricato = e.File;
+    }
 
-    /// <summary>
-    /// Gestisce la logica di creazione del nuovo account utente.
-    /// </summary>
     async Task OnSignup()
     {
         if (!accettaTermini) return;
 
         try
         {
-            // Gestione del percorso immagine se caricata
-            if (!string.IsNullOrEmpty(nomeFile))
-                nuovoUtente.FotoUrl = "/uploads/" + Guid.NewGuid() + "_" + nomeFile;
-            
-            // Criptazione sicura della password
-            string hash = BCrypt.HashPassword(nuovoUtente.Password);
+            string? fotoUrlFinale = null;
 
-            using (var db = new SqlConnection(Config.GetConnectionString("DefaultConnection")))
+            if (fileCaricato != null)
+            {
+                var cartellaUploads = Path.Combine(Env.WebRootPath, "uploads");
+                if (!Directory.Exists(cartellaUploads)) Directory.CreateDirectory(cartellaUploads);
+
+                var estensione = Path.GetExtension(fileCaricato.Name);
+                var nomeFileUnico = $"{Guid.NewGuid()}{estensione}";
+                var percorsoFisico = Path.Combine(cartellaUploads, nomeFileUnico);
+
+                // Lettura stream nativo (max 5MB)
+                using (var stream = fileCaricato.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024))
+                {
+                    using (var fs = new FileStream(percorsoFisico, FileMode.Create))
+                    {
+                        await stream.CopyToAsync(fs);
+                    }
+                }
+                fotoUrlFinale = "/uploads/" + nomeFileUnico;
+            }
+
+            // RISOLUZIONE DEFINITIVA BCRYPT: Usiamo il percorso globale completo
+            string passwordHash = global::BCrypt.Net.BCrypt.HashPassword(nuovoUtente.Password);
+
+            using (var db = new Microsoft.Data.SqlClient.SqlConnection(Config.GetConnectionString("DefaultConnection")))
             {
                 var sql = @"INSERT INTO dbo.Utenti (Nome, Cognome, Email, Password, Dipartimento, DataDiNascita, DataCreazione, FotoUrl) 
-                            VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, @DataCreazione, @FotoUrl)";
+                            VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, GETDATE(), @FotoUrl)";
                 
                 await db.ExecuteAsync(sql, new
                 {
                     nuovoUtente.Nome,
                     nuovoUtente.Cognome,
                     nuovoUtente.Email,
-                    Password = hash,
+                    Password = passwordHash,
                     nuovoUtente.Dipartimento,
                     nuovoUtente.DataDiNascita,
-                    DataCreazione = DateTime.Now,
-                    nuovoUtente.FotoUrl
+                    FotoUrl = fotoUrlFinale
                 });
 
                 successo = true;
                 messaggio = "Registrazione completata!";
                 StateHasChanged();
-                
-                // Attesa per permettere all'utente di leggere il messaggio prima del redirect
-                await Task.Delay(1500);
+                await Task.Delay(2000);
                 NavManager.NavigateTo("/login");
             }
         }
         catch (Exception ex)
         {
             successo = false;
-            messaggio = "Errore durante la registrazione: " + ex.Message;
+            messaggio = "Errore: " + ex.Message;
         }
     }
 }

@@ -1,0 +1,98 @@
+:root {
+    /* --- TAVOLOZZA COLORI ISTITUZIONALE (INTESI) --- */
+    --brand-primary: #005197; /* Blu principale logo */
+    --brand-action: #0372ba; /* Blu vivace per interazioni e link */
+    --brand-border: #a7c2e0; /* Azzurro chiaro per bordi e separatori */
+    /* --- SFONDO GRADIENTE --- */
+    --social-gradient-start: #e5edf6; /* Partenza grigio-azzurra */
+    --social-gradient-end: #005197; /* Chiusura blu istituzionale */
+    /* --- LAYOUT --- */
+    --brand-radius: 10px; /* Arrotondamento standard per componenti e card */
+}
+
+/* --- RESET E LAYOUT DI BASE --- */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* Blocca lo scroll della finestra principale */
+}
+
+/* Contenitore principale con gradiente dinamico */
+.main-container {
+    background: linear-gradient(135deg, var(--social-gradient-start), var(--social-gradient-end));
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Reset per componenti Radzen per ereditare lo sfondo del contenitore */
+.rz-layout, .rz-body {
+    background-color: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Centratura verticale/orizzontale del contenuto della pagina */
+.center-content {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding-top: 65px; /* Offset per non finire sotto la navbar */
+}
+
+/* --- OVERRIDE COMPONENTI RADZEN (ELEMENTI GLOBALI) --- */
+.rz-button {
+    border-radius: var(--brand-radius) !important;
+}
+
+.rz-label {
+    color: #4b4b4b !important; /* Testo etichette più leggibile */
+}
+
+/* Styling unificato per i link del brand */
+.rz-link,
+.rz-login-register a {
+    color: var(--brand-action) !important;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+    .rz-link:hover,
+    .rz-login-register a:hover {
+        color: var(--brand-primary) !important;
+        text-decoration: underline;
+    }
+
+/* --- PAGINA DI LOGIN --- */
+/* Card di accesso: fissa le dimensioni per evitare deformazioni al caricamento */
+.login-card {
+    max-width: 450px !important;
+    width: 90% !important;
+    border-radius: var(--brand-radius) !important;
+    background-color: white !important;
+    margin: auto;
+}
+
+/* Bottone secondario "Crea Account" nel componente RadzenLogin */
+.rz-login-register .rz-button {
+    background-color: var(--brand-action) !important;
+    color: white !important;
+}
+
+/* Footer della card (Termini e Condizioni) */
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    border-top: 1px solid var(--brand-border);
+    padding-top: 20px;
+}
+
+    .login-footer .rz-link {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }

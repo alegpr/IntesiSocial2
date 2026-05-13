@@ -35,11 +35,11 @@
                  RegisterMessageText="Non sei registrato?"
                  RegisterText="Crea account"
                  AllowRememberMe="false"
-                 AllowForgotPassword="true"
-                 ForgotPasswordText="Password dimenticata?"
+                 AllowResetPassword="true"
+                 ResetPasswordText="Password dimenticata?"
                  Login="@OnLogin"
                  Register="@(() => NavManager.NavigateTo("/signup"))"
-                 ForgotPassword="@(() => NavManager.NavigateTo("/recovery"))"
+                 ResetPassword="@(() => NavManager.NavigateTo("/recovery"))"
                  Style="--rz-primary: var(--brand-action);
     --rz-button-primary-background-color: var(--brand-primary);
     --rz-button-border-radius: var(--brand-radius);" />

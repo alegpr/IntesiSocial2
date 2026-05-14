@@ -1,17 +1,19 @@
 ﻿@inherits LayoutComponentBase
 @using Radzen.Blazor
+@using social_V0._0._1.Services @* <-- Assicurati che questo sia il namespace corretto per SessionService *@
 @inject NavigationManager NavManager
+@inject SessionService Session
 
 @* Inizializzazione dei servizi JS necessari per i componenti Radzen *@
 <RadzenComponents @rendermode="InteractiveServer" />
 
 <div class="main-container">
-    
+
     @* --- BARRA DI NAVIGAZIONE SUPERIORE (FIXED) --- *@
     <RadzenHeader Style="height: 65px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--brand-primary); position: fixed; top: 0; width: 100%; z-index: 1000;">
-        
+
         <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; width: 100%; align-items: center;">
-            
+
             @* Sezione Sinistra: Branding e Logo *@
             <div style="display: flex; align-items: center;">
                 <a href="/" style="display: flex; align-items: center; text-decoration: none;">
@@ -24,18 +26,17 @@
                 <div style="position: relative; width: 100%; max-width: 400px;">
                     <RadzenIcon Icon="search"
                                 Style="position: absolute; left: 15px; top: 10px; color: var(--brand-primary); z-index: 5;" />
-                    
+
                     <RadzenTextBox Placeholder="Cerca..."
                                    Style="width: 100%; border-radius: 50px; padding-left: 45px; background-color: #f0f2f5; border: 1px solid var(--brand-border); height: 40px;" />
                 </div>
             </div>
 
             @* Sezione Destra: Azioni Utente *@
-            <div style="display: flex; justify-content: flex-end;">
-                <RadzenButton Text="Accedi"
-                              ButtonStyle="ButtonStyle.Primary"
-                              Style="background-color: var(--brand-primary); border-radius: 10px; font-weight: bold; padding: 0 25px;"
-                              Click="@(() => NavManager.NavigateTo("/login"))" />
+            <div style="display: flex; justify-content: flex-end; align-items: center;">
+
+                <UserMenu />
+
             </div>
 
         </div>
@@ -48,3 +49,9 @@
     </div>
 
 </div>
+
+@code {
+    // Aggiungiamo la funzione di conversione anche qui nel Layout
+    private string? ToBase64(byte[]? bytes) =>
+        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
+}

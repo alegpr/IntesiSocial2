@@ -73,7 +73,7 @@
                 if (utente != null && BCrypt.Verify(args.Password, utente.Password))
                 {
                     Session.Login(utente);
-                    NavManager.NavigateTo("/home");
+                    NavManager.NavigateTo("/home", forceLoad: true);
                 }
                 else
                 {

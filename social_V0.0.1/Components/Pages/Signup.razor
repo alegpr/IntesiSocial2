@@ -6,7 +6,6 @@
 
 @inject IConfiguration Config
 @inject NavigationManager NavManager
-@inject IWebHostEnvironment Env
 @rendermode InteractiveServer
 
 <RadzenCard class="rz-shadow-10 rz-p-12"
@@ -111,22 +110,23 @@
 
             if (fileCaricato != null)
             {
-                var cartellaUploads = Path.Combine(Env.WebRootPath, "uploads");
-                if (!Directory.Exists(cartellaUploads)) Directory.CreateDirectory(cartellaUploads);
-
-                var estensione = Path.GetExtension(fileCaricato.Name);
-                var nomeFileUnico = $"{Guid.NewGuid()}{estensione}";
-                var percorsoFisico = Path.Combine(cartellaUploads, nomeFileUnico);
-
-                // Lettura stream nativo (max 5MB)
                 using (var stream = fileCaricato.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024))
+                using (var ms = new MemoryStream())
                 {
-                    using (var fs = new FileStream(percorsoFisico, FileMode.Create))
+                    await stream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    var ext = Path.GetExtension(fileCaricato.Name).ToLowerInvariant();
+                    var mime = ext switch
                     {
-                        await stream.CopyToAsync(fs);
-                    }
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".png" => "image/png",
+                        ".gif" => "image/gif",
+                        ".webp" => "image/webp",
+                        ".bmp" => "image/bmp",
+                        _ => "image/jpeg"
+                    };
+                    fotoUrlFinale = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
                 }
-                fotoUrlFinale = "/uploads/" + nomeFileUnico;
             }
 
             // RISOLUZIONE DEFINITIVA BCRYPT: Usiamo il percorso globale completo

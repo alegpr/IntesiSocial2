@@ -16,8 +16,8 @@ builder.Services.AddSingleton<PostService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
     {
-        options.Circuits.DetailedErrors = true;
-        options.Circuits.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
+        options.DetailedErrors = true;
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
     });
 
 // Iniezione dei componenti e delle utility grafiche Radzen

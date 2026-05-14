@@ -33,6 +33,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseHttpsRedirection();
+
 // Abilitazione dei file statici (CSS, immagini, JS di Radzen)
 app.UseStaticFiles();
 

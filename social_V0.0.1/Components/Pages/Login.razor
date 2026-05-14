@@ -35,13 +35,13 @@
                  RegisterMessageText="Non sei registrato?"
                  RegisterText="Crea account"
                  AllowRememberMe="false"
-                 AllowForgotPassword="true"
-                 ForgotPasswordText="Password dimenticata?"
+                 AllowResetPassword="true"
+                 ResetPasswordText="Password dimenticata?"
                  Login="@OnLogin"
                  Register="@(() => NavManager.NavigateTo("/signup"))"
-                 ForgotPassword="@(() => NavManager.NavigateTo("/recovery"))"
+                 ResetPassword="@(() => NavManager.NavigateTo("/recovery"))"
                  Style="--rz-primary: var(--brand-action);
-    --rz-button-primary-background-color: var(--brand-primary);
+    --rz-button-primary-backgroun-color: var(--brand-primary);
     --rz-button-border-radius: var(--brand-radius);" />
 
     @* Footer della card con link legale *@
@@ -73,7 +73,7 @@
                 if (utente != null && BCrypt.Verify(args.Password, utente.Password))
                 {
                     Session.Login(utente);
-                    NavManager.NavigateTo("/home");
+                    NavManager.NavigateTo("/home", forceLoad: true);
                 }
                 else
                 {

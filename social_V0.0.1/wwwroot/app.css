@@ -18,6 +18,7 @@ html, body {
     width: 100vw;
     overflow-x: hidden;
     overflow-y: auto;
+}
 
 /* Contenitore principale con gradiente dinamico */
 .main-container {

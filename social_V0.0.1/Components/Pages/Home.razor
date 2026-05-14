@@ -1,4 +1,6 @@
 ﻿@page "/home"
+@implements IDisposable
+@using System
 @using social_V0._0._1.Models
 @using social_V0._0._1.Services
 @inject PostService MyService
@@ -20,9 +22,9 @@
                         {
                             <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2" Style="text-align: center; border-top: 5px solid var(--brand-primary); background: white;">
                                 <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto 15px auto; border: 3px solid var(--brand-border);">
-                                    @if (!string.IsNullOrEmpty(utenteLoggato.FotoUrl))
+                                    @if (utenteLoggato.FotoUrl != null)
                                     {
-                                        <img src="@utenteLoggato.FotoUrl.TrimStart('/')" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <img src="@ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                     }
                                     else
                                     {
@@ -97,9 +99,9 @@
                                     @if (utenteLoggato != null)
                                     {
                                         <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid var(--brand-border);">
-                                            @if (!string.IsNullOrEmpty(utenteLoggato.FotoUrl))
+                                            @if (utenteLoggato.FotoUrl != null)
                                             {
-                                                <img src="@utenteLoggato.FotoUrl.TrimStart('/')" style="width: 100%; height: 100%; object-fit: cover;" />
+                                                <img src="@ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                             }
                                         </div>
                                     }
@@ -128,8 +130,8 @@
                                     <RadzenStack Gap="1.5rem">
                                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.2rem">
                                             <div style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand-border); flex-shrink: 0;">
-                                                @if (!string.IsNullOrEmpty(post.FotoUrl)) {
-                                                    <img src="@post.FotoUrl.TrimStart('/')" style="width: 100%; height: 100%; object-fit: cover;" />
+                                                @if (post.FotoUrl != null) {
+                                                    <img src="@post.FotoUrlBase64" style="width: 100%; height: 100%; object-fit: cover;" />
                                                 } else {
                                                     <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: var(--brand-primary); color:white; font-weight:bold;">@post.Iniziali</div>
                                                 }
@@ -173,6 +175,7 @@
     private List<Utente> listaCompleanni;
     private Utente utenteLoggato;
     private string nuovoPostContenuto = "";
+    private CancellationTokenSource? _cts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,6 +189,32 @@
         // 2. Assegna l'utente e carica i dati
         utenteLoggato = Session.UtenteLoggato;
         await CaricaDati();
+
+        // 3. Auto-refresh feed ogni 10 secondi
+        _cts = new CancellationTokenSource();
+        _ = AutoRefreshLoop(_cts.Token);
+    }
+
+    private async Task AutoRefreshLoop(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+            if (!ct.IsCancellationRequested)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await CaricaDati();
+                    StateHasChanged();
+                });
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 
     private async Task CaricaDati()
@@ -201,6 +230,9 @@
             Console.WriteLine($"Errore: {ex.Message}");
         }
     }
+
+    private string? ToBase64(byte[]? bytes) =>
+        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
 
     private async Task PubblicaPost()
     {

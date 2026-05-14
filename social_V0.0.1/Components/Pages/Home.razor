@@ -1,4 +1,5 @@
 ﻿@page "/home"
+@implements IDisposable
 @using System
 @using social_V0._0._1.Models
 @using social_V0._0._1.Services
@@ -174,6 +175,7 @@
     private List<Utente> listaCompleanni;
     private Utente utenteLoggato;
     private string nuovoPostContenuto = "";
+    private CancellationTokenSource? _cts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,6 +189,32 @@
         // 2. Assegna l'utente e carica i dati
         utenteLoggato = Session.UtenteLoggato;
         await CaricaDati();
+
+        // 3. Auto-refresh feed ogni 10 secondi
+        _cts = new CancellationTokenSource();
+        _ = AutoRefreshLoop(_cts.Token);
+    }
+
+    private async Task AutoRefreshLoop(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+            if (!ct.IsCancellationRequested)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await CaricaDati();
+                    StateHasChanged();
+                });
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 
     private async Task CaricaDati()

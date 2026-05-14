@@ -6,7 +6,7 @@ namespace social_V0._0._1.Services
 {
     public class PostService
     {
-        private readonly string _connectionString = "Server=192.168.16.215,1433;Database=db.social;User Id=app_user;Password=2026Intesi;TrustServerCertificate=True;";
+        private readonly string _connectionString = "Server=tcp:sql-fsl-intesi-2026.database.windows.net,1433;Database=fsl-sql-intesi-2026;User Id=fsl-admin;Password=Password1;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
         public async Task<Utente> GetPrimoUtenteAsync()
         {

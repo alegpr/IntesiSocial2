@@ -3,9 +3,6 @@
 @using Dapper
 @using social_V0._0._1.Models
 @using System.IO
-@using Radzen
-@using Radzen.Blazor
-@using Microsoft.AspNetCore.Components.Forms
 
 @inject IConfiguration Config
 @inject NavigationManager NavManager
@@ -135,7 +132,7 @@
             // RISOLUZIONE DEFINITIVA BCRYPT: Usiamo il percorso globale completo
             string passwordHash = global::BCrypt.Net.BCrypt.HashPassword(nuovoUtente.Password);
 
-            using (var db = new Microsoft.Data.SqlClient.SqlConnection(Config.GetConnectionString("DefaultConnection")))
+            using (var db = new SqlConnection(Config.GetConnectionString("DefaultConnection")))
             {
                 var sql = @"INSERT INTO dbo.Utenti (Nome, Cognome, Email, Password, Dipartimento, DataDiNascita, DataCreazione, FotoUrl) 
                             VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, GETDATE(), @FotoUrl)";

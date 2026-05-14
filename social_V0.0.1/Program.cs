@@ -2,7 +2,6 @@ using Radzen;
 using Microsoft.Data.SqlClient;
 using social_V0._0._1.Components;
 using social_V0._0._1.Services;
-using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,11 +13,7 @@ builder.Services.AddSingleton<PostService>();
 
 // Supporto per componenti Razor e Rendering Interattivo (Server-side)
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options =>
-    {
-        options.DetailedErrors = true;
-        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
-    });
+    .AddInteractiveServerComponents();
 
 // Iniezione dei componenti e delle utility grafiche Radzen
 builder.Services.AddRadzenComponents();
@@ -38,14 +33,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseHttpsRedirection();
+
 // Abilitazione dei file statici (CSS, immagini, JS di Radzen)
 app.UseStaticFiles();
-
-// Abilita WebSocket per Blazor Server SignalR
-app.UseWebSockets(new WebSocketOptions
-{
-    KeepAliveInterval = TimeSpan.FromSeconds(120)
-});
 
 // Protezione contro attacchi Cross-Site Request Forgery (CSRF)
 app.UseAntiforgery();

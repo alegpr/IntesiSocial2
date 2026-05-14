@@ -40,7 +40,6 @@ namespace social_V0._0._1.Models
         // --- METADATI DI SISTEMA ---
         public DateTime DataCreazione { get; set; } = DateTime.Now;
 
-        [StringLength(255)]
-        public string? FotoUrl { get; set; }
+        public byte[]? FotoUrl { get; set; }
     }
 }

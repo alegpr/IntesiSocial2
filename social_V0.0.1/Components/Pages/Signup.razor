@@ -106,7 +106,7 @@
 
         try
         {
-            string? fotoUrlFinale = null;
+            byte[]? fotoUrlFinale = null;
 
             if (fileCaricato != null)
             {
@@ -114,18 +114,7 @@
                 using (var ms = new MemoryStream())
                 {
                     await stream.CopyToAsync(ms);
-                    var bytes = ms.ToArray();
-                    var ext = Path.GetExtension(fileCaricato.Name).ToLowerInvariant();
-                    var mime = ext switch
-                    {
-                        ".jpg" or ".jpeg" => "image/jpeg",
-                        ".png" => "image/png",
-                        ".gif" => "image/gif",
-                        ".webp" => "image/webp",
-                        ".bmp" => "image/bmp",
-                        _ => "image/jpeg"
-                    };
-                    fotoUrlFinale = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+                    fotoUrlFinale = ms.ToArray();
                 }
             }
 

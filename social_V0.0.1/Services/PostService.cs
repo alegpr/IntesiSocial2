@@ -26,7 +26,7 @@ namespace social_V0._0._1.Services
                                 UtenteId = (int)reader["UtenteId"],
                                 Nome = reader["Nome"].ToString(),
                                 Cognome = reader["Cognome"].ToString(),
-                                FotoUrl = reader["FotoUrl"]?.ToString()
+                                FotoUrl = reader["FotoUrl"] as byte[]
                             };
                         }
                     }
@@ -70,7 +70,7 @@ namespace social_V0._0._1.Services
                             Nome = reader["Nome"]?.ToString() ?? "",
                             Cognome = reader["Cognome"]?.ToString() ?? "",
                             Dipartimento = reader["Dipartimento"]?.ToString() ?? "N/D",
-                            FotoUrl = reader["FotoUrl"] == DBNull.Value ? null : reader["FotoUrl"].ToString()
+                            FotoUrl = reader["FotoUrl"] as byte[]
                         });
                     }
                 }

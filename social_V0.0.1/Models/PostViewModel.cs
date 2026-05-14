@@ -9,7 +9,8 @@
         public string Nome { get; set; } = string.Empty;
         public string Cognome { get; set; } = string.Empty;
         public string Dipartimento { get; set; } = string.Empty;
-        public string FotoUrl { get; set; } = string.Empty;
+        public byte[]? FotoUrl { get; set; }
+        public string? FotoUrlBase64 => FotoUrl != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(FotoUrl)}" : null;
         public string Iniziali => $"{(Nome?.Length > 0 ? Nome[0] : "")}{(Cognome?.Length > 0 ? Cognome[0] : "")}";
     }
 }

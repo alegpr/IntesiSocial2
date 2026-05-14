@@ -2,6 +2,7 @@ using Radzen;
 using Microsoft.Data.SqlClient;
 using social_V0._0._1.Components;
 using social_V0._0._1.Services;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,8 +16,8 @@ builder.Services.AddSingleton<PostService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
     {
-        options.DetailedErrors = true;
-        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
+        options.Circuits.DetailedErrors = true;
+        options.Circuits.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
     });
 
 // Iniezione dei componenti e delle utility grafiche Radzen

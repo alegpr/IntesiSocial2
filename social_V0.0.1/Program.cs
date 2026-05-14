@@ -2,6 +2,7 @@ using Radzen;
 using Microsoft.Data.SqlClient;
 using social_V0._0._1.Components;
 using social_V0._0._1.Services;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,11 @@ builder.Services.AddSingleton<PostService>();
 
 // Supporto per componenti Razor e Rendering Interattivo (Server-side)
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.Circuits.DetailedErrors = true;
+        options.Circuits.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(10);
+    });
 
 // Iniezione dei componenti e delle utility grafiche Radzen
 builder.Services.AddRadzenComponents();

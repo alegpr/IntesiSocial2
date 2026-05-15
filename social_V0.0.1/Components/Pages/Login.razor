@@ -1,11 +1,7 @@
 ﻿@page "/"
 @page "/login"
-@using Microsoft.Data.SqlClient
-@using Dapper
-@using BCrypt.Net
-@using social_V0._0._1.Models
 @using social_V0._0._1.Services
-@inject IConfiguration Config
+@inject UtenteService UtenteSvc
 @inject NavigationManager NavManager
 @inject SessionService Session
 @rendermode InteractiveServer
@@ -135,25 +131,21 @@
 
         try
         {
-            using (var db = new SqlConnection(Config.GetConnectionString("DefaultConnection")))
-            {
-                var sql = "SELECT * FROM dbo.Utenti WHERE Email = @User";
-                var utente = await db.QueryFirstOrDefaultAsync<Utente>(sql, new { User = email });
+            var utente = await UtenteSvc.LoginAsync(email, password);
 
-                if (utente != null && BCrypt.Verify(password, utente.Password))
-                {
-                    Session.Login(utente);
-                    NavManager.NavigateTo("/home", forceLoad: true);
-                }
-                else
-                {
-                    messaggio = "Email o Password errati.";
-                }
+            if (utente != null)
+            {
+                Session.Login(utente);
+                NavManager.NavigateTo("/home", forceLoad: true);
+            }
+            else
+            {
+                messaggio = "Email o Password errati.";
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            messaggio = "Errore di connessione al database.";
+            messaggio = $"Errore: {ex.Message}";
         }
     }
 }

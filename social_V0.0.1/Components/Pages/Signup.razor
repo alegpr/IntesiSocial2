@@ -1,12 +1,10 @@
 ﻿@page "/signup"
-@using Microsoft.Data.SqlClient
-@using Dapper
 @using social_V0._0._1.Models
-@using System.IO
+@using social_V0._0._1.Services
 
-@inject IConfiguration Config
+@inject UtenteService UtenteSvc
 @inject NavigationManager NavManager
-@inject social_V0._0._1.Services.SessionService Session
+@inject SessionService Session
 @rendermode InteractiveServer
 
 <PageTitle>SignUp</PageTitle>
@@ -128,31 +126,13 @@
                 }
             }
 
-            // RISOLUZIONE DEFINITIVA BCRYPT: Usiamo il percorso globale completo
-            string passwordHash = global::BCrypt.Net.BCrypt.HashPassword(nuovoUtente.Password);
+            await UtenteSvc.RegisterAsync(nuovoUtente, fotoUrlFinale);
 
-            using (var db = new SqlConnection(Config.GetConnectionString("DefaultConnection")))
-            {
-                var sql = @"INSERT INTO dbo.Utenti (Nome, Cognome, Email, Password, Dipartimento, DataDiNascita, DataCreazione, FotoUrl) 
-                            VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, GETDATE(), @FotoUrl)";
-                
-                await db.ExecuteAsync(sql, new
-                {
-                    nuovoUtente.Nome,
-                    nuovoUtente.Cognome,
-                    nuovoUtente.Email,
-                    Password = passwordHash,
-                    nuovoUtente.Dipartimento,
-                    nuovoUtente.DataDiNascita,
-                    FotoUrl = fotoUrlFinale
-                });
-
-                successo = true;
-                messaggio = "Registrazione completata!";
-                StateHasChanged();
-                await Task.Delay(2000);
-                NavManager.NavigateTo("/login");
-            }
+            successo = true;
+            messaggio = "Registrazione completata!";
+            StateHasChanged();
+            await Task.Delay(2000);
+            NavManager.NavigateTo("/login");
         }
         catch (Exception ex)
         {

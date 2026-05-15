@@ -3,7 +3,10 @@
 @using System
 @using social_V0._0._1.Models
 @using social_V0._0._1.Services
-@inject PostService MyService
+@using social_V0._0._1.Utils
+@inject PostService PostSvc
+@inject UtenteService UtenteSvc
+@inject AvvisoService AvvisoSvc
 @inject NavigationManager NavManager
 @inject SessionService Session
 @rendermode InteractiveServer
@@ -14,6 +17,13 @@
     <div class="center-content">
         <div style="width: 100%; max-width: 1600px; padding: 0 24px;">
             
+            @if (!string.IsNullOrEmpty(messaggioErrore))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
+                    @messaggioErrore
+                </RadzenAlert>
+            }
+
             <RadzenRow Gap="2.5rem">
                 
                 @* --- COLONNA SINISTRA --- *@
@@ -26,7 +36,7 @@
                                 <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto 15px auto; border: 3px solid var(--brand-border);">
                                     @if (utenteLoggato.FotoUrl != null)
                                     {
-                                        <img src="@ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <img src="@ImageHelper.ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                     }
                                     else
                                     {
@@ -102,7 +112,7 @@
                                         <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid var(--brand-border);">
                                             @if (utenteLoggato.FotoUrl != null)
                                             {
-                                                <img src="@ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
+                                                <img src="@ImageHelper.ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                             }
                                             else
                                             {
@@ -188,6 +198,7 @@
     private List<Utente> listaCompleanni;
     private Utente utenteLoggato;
     private string nuovoPostContenuto = "";
+    private string? messaggioErrore;
     private CancellationTokenSource? _cts;
 
     protected override async Task OnInitializedAsync()
@@ -234,12 +245,14 @@
     {
         try
         {
-            posts = await MyService.GetAllPostsAsync(utenteLoggato.UtenteId);
-            listaAvvisi = await MyService.GetAvvisiAttiviAsync();
-            listaCompleanni = await MyService.GetCompleanniOggiAsync();
+            posts = await PostSvc.GetAllPostsAsync(utenteLoggato.UtenteId);
+            listaAvvisi = await AvvisoSvc.GetAvvisiAttiviAsync();
+            listaCompleanni = await UtenteSvc.GetCompleanniOggiAsync();
+            messaggioErrore = null;
         }
         catch (Exception ex)
         {
+            messaggioErrore = $"Errore caricamento dati: {ex.Message}";
             Console.WriteLine($"Errore: {ex.Message}");
         }
     }
@@ -255,7 +268,7 @@
             if (post.IsLikedByMe) post.LikeCount++; else post.LikeCount--;
 
             // Chiamata al database tramite il Service
-            await MyService.ToggleLikeAsync(post.PostId, utenteLoggato.UtenteId);
+            await PostSvc.ToggleLikeAsync(post.PostId, utenteLoggato.UtenteId);
         }
         catch (Exception ex)
         {
@@ -265,22 +278,20 @@
         }
     }
 
-    private string? ToBase64(byte[]? bytes) =>
-        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
-
     private async Task PubblicaPost()
     {
         if (!string.IsNullOrWhiteSpace(nuovoPostContenuto) && utenteLoggato != null)
         {
             try
             {
-                await MyService.InsertPostAsync(utenteLoggato.UtenteId, nuovoPostContenuto);
+                await PostSvc.InsertPostAsync(utenteLoggato.UtenteId, nuovoPostContenuto);
                 nuovoPostContenuto = "";
                 await CaricaDati();
                 StateHasChanged();
             }
             catch (Exception ex)
             {
+                messaggioErrore = $"Errore pubblicazione: {ex.Message}";
                 Console.WriteLine($"Errore: {ex.Message}");
             }
         }

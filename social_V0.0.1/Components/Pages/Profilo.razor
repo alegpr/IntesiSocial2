@@ -6,7 +6,9 @@
 @using System.IO
 @using social_V0._0._1.Models
 @using social_V0._0._1.Services
-@inject PostService MyService
+@using social_V0._0._1.Utils
+@inject PostService PostSvc
+@inject UtenteService UtenteSvc
 @inject NavigationManager NavManager
 @inject SessionService Session
 @rendermode InteractiveServer
@@ -31,7 +33,7 @@
                                 <div style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 4px solid var(--brand-border);">
                                     @if (utente.FotoUrl != null)
                                     {
-                                        <img src="@ToBase64(utente.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <img src="@ImageHelper.ToBase64(utente.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                     }
                                     else
                                     {
@@ -332,13 +334,14 @@
     {
         try
         {
-            utente = await MyService.GetUtenteByIdAsync(Session.UtenteLoggato.UtenteId);
+            utente = await UtenteSvc.GetUtenteByIdAsync(Session.UtenteLoggato.UtenteId);
             if (utente != null)
                 Session.Login(utente);  // Aggiorna la sessione con dati freschi
-            posts = await MyService.GetPostsByUtenteAsync(Session.UtenteLoggato.UtenteId);
+            posts = await PostSvc.GetPostsByUtenteAsync(Session.UtenteLoggato.UtenteId);
         }
         catch (Exception ex)
         {
+            messaggioModifica = $"Errore caricamento profilo: {ex.Message}";
             Console.WriteLine($"Errore caricamento profilo: {ex.Message}");
         }
     }
@@ -377,11 +380,11 @@
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
             modificaFotoBytes = ms.ToArray();
-            modificaFotoPreview = $"data:image/jpeg;base64,{Convert.ToBase64String(modificaFotoBytes)}";
+            modificaFotoPreview = ImageHelper.ToBase64(modificaFotoBytes);
         }
     }
 
-    // Salva le modifiche profilo sul DB tramite PostService.UpdateUtenteAsync.
+    // Salva le modifiche profilo sul DB tramite UtenteService.UpdateUtenteAsync.
     // Se è stata caricata una nuova foto, aggiorna anche FotoUrl.
     // Poi ricarica il profilo per riflettere i cambiamenti.
     private async Task SalvaModifiche()
@@ -395,7 +398,7 @@
             if (modificaFotoBytes != null)
                 utente.FotoUrl = modificaFotoBytes;
 
-            await MyService.UpdateUtenteAsync(utente);
+            await UtenteSvc.UpdateUtenteAsync(utente);
             Session.Login(utente);
 
             modalitaModifica = false;
@@ -426,7 +429,7 @@
     // 1. Validazione campi (tutti compilati, coincidenza, >= 6 caratteri)
     // 2. Verifica vecchia password con BCrypt.Verify
     // 3. Se ok, hash della nuova password con BCrypt.HashPassword
-    // 4. Salva hash sul DB tramite PostService.UpdatePasswordAsync
+    // 4. Salva hash sul DB tramite UtenteService.UpdatePasswordAsync
     private async Task CambiaPassword()
     {
         successoPassword = false;
@@ -459,7 +462,7 @@
             }
 
             var hash = BCrypt.Net.BCrypt.HashPassword(nuovaPassword);
-            await MyService.UpdatePasswordAsync(utente.UtenteId, hash);
+            await UtenteSvc.UpdatePasswordAsync(utente.UtenteId, hash);
 
             successoPassword = true;
             messaggioPassword = "Password aggiornata con successo!";
@@ -475,8 +478,4 @@
 
     // ── UTILITY ──
 
-    // Converte byte[] in data URI base64 per visualizzare le immagini.
-    // Esempio output: data:image/jpeg;base64,/9j/4AAQ...
-    private string? ToBase64(byte[]? bytes) =>
-        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
 }

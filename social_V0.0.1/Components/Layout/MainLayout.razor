@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using Radzen.Blazor
-@using social_V0._0._1.Services @* <-- Assicurati che questo sia il namespace corretto per SessionService *@
+@using social_V0._0._1.Services
+@using social_V0._0._1.Utils
 @inject NavigationManager NavManager
 @inject SessionService Session
 
@@ -49,9 +50,3 @@
     </div>
 
 </div>
-
-@code {
-    // Aggiungiamo la funzione di conversione anche qui nel Layout
-    private string? ToBase64(byte[]? bytes) =>
-        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
-}

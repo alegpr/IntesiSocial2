@@ -1,5 +1,4 @@
 using Radzen;
-using Microsoft.Data.SqlClient;
 using social_V0._0._1.Components;
 using social_V0._0._1.Services;
 
@@ -10,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Cambiato in Singleton per mantenere i dati dell'utente loggato tra le pagine
 builder.Services.AddSingleton<SessionService>();
 builder.Services.AddSingleton<PostService>();
+builder.Services.AddSingleton<UtenteService>();
+builder.Services.AddSingleton<AvvisoService>();
 
 // Supporto per componenti Razor e Rendering Interattivo (Server-side)
 builder.Services.AddRazorComponents()
@@ -17,10 +18,6 @@ builder.Services.AddRazorComponents()
 
 // Iniezione dei componenti e delle utility grafiche Radzen
 builder.Services.AddRadzenComponents();
-
-// Configurazione della connessione SQL tramite Dapper
-builder.Services.AddScoped(sp =>
-    new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 

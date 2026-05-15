@@ -91,7 +91,6 @@
                     </RadzenStack>
                 </RadzenColumn>
 
-                @* --- COLONNA DESTRA (FEED) --- *@
                 <RadzenColumn Size="12" SizeMD="9">
                     <RadzenStack Gap="2rem">
                         
@@ -105,13 +104,19 @@
                                             {
                                                 <img src="@ToBase64(utenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
                                             }
+                                            else
+                                            {
+                                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: var(--brand-primary); color:white; font-weight:bold; font-size: 0.9rem;">
+                                                    @utenteLoggato.Nome[0]@utenteLoggato.Cognome[0]
+                                                </div>
+                                            }
                                         </div>
                                     }
-                                    <RadzenTextArea @bind-Value="@nuovoPostContenuto" 
-                                                   Placeholder="Cosa vuoi condividere con i colleghi?" 
-                                                   Rows="3" 
-                                                   Class="rz-w-100" 
-                                                   Style="border-radius: 12px; border: 1px solid var(--brand-border); padding: 15px; font-size: 1.1rem;" />
+                                    <RadzenTextArea @bind-Value="@nuovoPostContenuto"
+                                                    Placeholder="Cosa vuoi condividere con i colleghi?"
+                                                    Rows="3"
+                                                    Class="rz-w-100"
+                                                    Style="border-radius: 12px; border: 1px solid var(--brand-border); padding: 15px; font-size: 1.1rem;" />
                                 </div>
                                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
                                     <RadzenButton Click="@PubblicaPost"

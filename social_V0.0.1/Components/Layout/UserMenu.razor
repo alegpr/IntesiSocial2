@@ -1,29 +1,46 @@
 ﻿@using Radzen.Blazor
-@using social_V0._0._1.Services @* Aggiusta il namespace se necessario *@
+@using social_V0._0._1.Services
 @inject SessionService Session
 @inject NavigationManager NavManager
 @rendermode InteractiveServer
+
+<style>
+    .rz-profile-menu .rz-navigation-item-content .rz-navigation-item-link i,
+    .rz-profile-menu .rz-navigation-item-content .rz-navigation-item-link span {
+        color: var(--brand-primary) !important;
+    }
+
+    .rz-navigation-item-link:hover {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .text-white-force {
+        color: white !important;
+    }
+</style>
 
 @if (Session.UtenteLoggato == null)
 {
     <a href="/login"
        class="rz-button rz-button-primary"
-       style="background-color: var(--brand-primary); border-radius: 10px; font-weight: bold; padding: 0 25px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: white; height: 35px;">
+       style="background-color: var(--brand-primary); border-radius: 10px; font-weight: bold; padding: 0 25px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: white !important; height: 35px;">
         Accedi
     </a>
 }
 else
 {
-    <RadzenProfileMenu Style="margin: 0;">
+    <RadzenProfileMenu Style="margin: 0; background: transparent; box-shadow: none;" Class="rz-profile-menu">
         <Template>
-            <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand-primary); display: flex; align-items: center; justify-content: center; background-color: var(--brand-action); color: white; font-weight: bold; cursor: pointer;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand-primary); display: flex; align-items: center; justify-content: center; background-color: var(--brand-primary); cursor: pointer;">
                 @if (Session.UtenteLoggato.FotoUrl != null)
                 {
                     <img src="@ToBase64(Session.UtenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" alt="Profilo" />
                 }
                 else
                 {
-                    <span style="font-size: 0.9rem;">@Session.UtenteLoggato.Nome[0]@Session.UtenteLoggato.Cognome[0]</span>
+                    <span class="text-white-force" style="font-size: 0.9rem; font-weight: bold;">
+                        @Session.UtenteLoggato.Nome[0]@Session.UtenteLoggato.Cognome[0]
+                    </span>
                 }
             </div>
         </Template>

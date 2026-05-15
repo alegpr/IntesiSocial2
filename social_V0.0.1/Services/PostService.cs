@@ -93,6 +93,70 @@ namespace social_V0._0._1.Services
                 return result.ToList();
             }
         }
+        // Recupera un utente dal DB tramite ID (SELECT * = tutte le colonne, incluso Password e FotoUrl)
+        public async Task<Utente?> GetUtenteByIdAsync(int utenteId)
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                var sql = "SELECT * FROM dbo.Utenti WHERE UtenteId = @Id";
+                return await db.QueryFirstOrDefaultAsync<Utente>(sql, new { Id = utenteId });
+            }
+        }
+
+        // Recupera solo i post di un singolo utente (per la pagina Profilo).
+        // Include like count e stato like dell'utente stesso (IsLikedByMe).
+        public async Task<List<PostViewModel>> GetPostsByUtenteAsync(int utenteId)
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                string sql = @"
+                    SELECT P.PostId, P.Contenuto, P.DataPubblicazione,
+                           U.Nome, U.Cognome, U.Dipartimento, U.FotoUrl,
+                           (SELECT COUNT(*) FROM dbo.PostLikes WHERE PostId = P.PostId) AS LikeCount,
+                           CAST(CASE WHEN EXISTS (
+                               SELECT 1 FROM dbo.PostLikes WHERE PostId = P.PostId AND UtenteId = @MioId
+                           ) THEN 1 ELSE 0 END AS BIT) AS IsLikedByMe
+                    FROM dbo.Post P
+                    INNER JOIN dbo.Utenti U ON P.UtenteId = U.UtenteId
+                    WHERE P.UtenteId = @UtenteId
+                    ORDER BY P.DataPubblicazione DESC";
+
+                var result = await db.QueryAsync<PostViewModel>(sql, new { UtenteId = utenteId, MioId = utenteId });
+                return result.ToList();
+            }
+        }
+
+        // Aggiorna i dati anagrafici dell'utente (Nome, Cognome, Dipartimento, DataNascita, FotoUrl).
+        // Se FotoUrl è null, non lo include nell'UPDATE per non sovrascrivere con null.
+        public async Task UpdateUtenteAsync(Utente utente)
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                string sql;
+                if (utente.FotoUrl != null)
+                {
+                    sql = "UPDATE dbo.Utenti SET Nome = @Nome, Cognome = @Cognome, Dipartimento = @Dipartimento, DataDiNascita = @DataDiNascita, FotoUrl = @FotoUrl WHERE UtenteId = @UtenteId";
+                    await db.ExecuteAsync(sql, new { utente.Nome, utente.Cognome, utente.Dipartimento, utente.DataDiNascita, utente.FotoUrl, utente.UtenteId });
+                }
+                else
+                {
+                    sql = "UPDATE dbo.Utenti SET Nome = @Nome, Cognome = @Cognome, Dipartimento = @Dipartimento, DataDiNascita = @DataDiNascita WHERE UtenteId = @UtenteId";
+                    await db.ExecuteAsync(sql, new { utente.Nome, utente.Cognome, utente.Dipartimento, utente.DataDiNascita, utente.UtenteId });
+                }
+            }
+        }
+
+        // Aggiorna solo la password hash dell'utente (usata da CambiaPassword).
+        // Il parametro nuovaPasswordHash dev'essere già hash BCrypt.
+        public async Task UpdatePasswordAsync(int utenteId, string nuovaPasswordHash)
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                await db.ExecuteAsync("UPDATE dbo.Utenti SET Password = @Password WHERE UtenteId = @UtenteId",
+                    new { Password = nuovaPasswordHash, UtenteId = utenteId });
+            }
+        }
+
         public async Task<List<Avviso>> GetAvvisiAttiviAsync()
         {
             using (var connection = new SqlConnection(_connectionString))

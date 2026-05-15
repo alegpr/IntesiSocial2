@@ -1,0 +1,482 @@
+@* 
+    Pagina Profilo utente (/profilo)
+    Mostra i dati personali, permette di modificarli, cambiare password e vedere i propri post.
+*@
+@page "/profilo"
+@using System.IO
+@using social_V0._0._1.Models
+@using social_V0._0._1.Services
+@inject PostService MyService
+@inject NavigationManager NavManager
+@inject SessionService Session
+@rendermode InteractiveServer
+
+<PageTitle>Profilo</PageTitle>
+
+<div class="main-container">
+    <div class="center-content">
+        <div style="width: 100%; max-width: 1200px; padding: 0 24px;">
+
+            <RadzenRow Gap="2rem">
+
+                @* COLONNA SINISTRA (4/12) — Card informativa e pulsanti azione *@
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack Gap="1.5rem" Style="position: sticky; top: 85px;">
+
+                        @* Card riepilogo profilo: foto, nome, email, dipartimento, compleanno *@
+                        <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2" Style="background: white; border-top: 5px solid var(--brand-primary);">
+                            <RadzenStack Gap="1rem" AlignItems="AlignItems.Center">
+
+                                @* Foto profilo circolare (140px). Se assente mostra iniziali *@
+                                <div style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 4px solid var(--brand-border);">
+                                    @if (utente.FotoUrl != null)
+                                    {
+                                        <img src="@ToBase64(utente.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:100%; height:100%; background: var(--brand-primary); color: white; display:flex; align-items:center; justify-content:center; font-size: 3rem; font-weight:bold;">
+                                            @(utente.Nome.Length > 0 ? utente.Nome[0].ToString() : "")@(utente.Cognome.Length > 0 ? utente.Cognome[0].ToString() : "")
+                                        </div>
+                                    }
+                                </div>
+
+                                <RadzenText TextStyle="TextStyle.H5" Class="rz-m-0" Style="color: var(--brand-primary); font-weight: 700; text-align: center;">
+                                    @utente.Nome @utente.Cognome
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--brand-action); font-weight: 600;">
+                                    @utente.Email
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Subtitle2" Style="color: #555;">
+                                    @utente.Dipartimento
+                                </RadzenText>
+
+                                @if (utente.DataDiNascita.HasValue)
+                                {
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="color: #888;">
+                                        🎂 @utente.DataDiNascita.Value.ToString("dd MMMM yyyy")
+                                    </RadzenText>
+                                }
+
+                            </RadzenStack>
+                        </RadzenCard>
+
+                        @* Pulsanti azione: ogni bottone apre la rispettiva sezione nella colonna destra *@
+                        <RadzenButton Text="Modifica profilo"
+                                      Icon="edit"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Click="@ApriModifica"
+                                      Class="w-100"
+                                      Style="background-color: var(--brand-primary); border-radius: 8px;" />
+
+                        <RadzenButton Text="Cambia password"
+                                      Icon="lock"
+                                      Click="@ApriCambioPassword"
+                                      Class="w-100"
+                                      Style="background-color: #ff9800; border-radius: 8px; color: white; font-weight: 600;" />
+
+                        <RadzenButton Text="Torna alla Home"
+                                      Icon="home"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Click="@(() => NavManager.NavigateTo("/home"))"
+                                      Class="w-100"
+                                      Style="border-radius: 8px; color: var(--brand-primary);" />
+
+                    </RadzenStack>
+                </RadzenColumn>
+
+                @* COLONNA DESTRA (8/12) — Modifica profilo, cambio password, lista post *@
+                <RadzenColumn Size="12" SizeMD="8">
+                    <RadzenStack Gap="2rem">
+
+                        @* ── SEZIONE MODIFICA PROFILO ── 
+                           Visibile solo quando l'utente clicca "Modifica profilo"
+                           Chiude automaticamente la sezione cambio password *@
+                        @if (modalitaModifica)
+                        {
+                            <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2 rz-p-8" Style="background: white; border-left: 5px solid var(--brand-primary);">
+                                <RadzenText TextStyle="TextStyle.H5" Class="rz-mb-6" Style="font-weight: 700; color: var(--brand-primary);">Modifica Profilo</RadzenText>
+
+                                <RadzenStack Gap="1.5rem">
+                                    @* Nome e Cognome affiancati in una riga a due colonne *@
+                                    <RadzenRow>
+                                        <RadzenColumn Size="6">
+                                            <RadzenFormField Text="Nome" Style="width:100%">
+                                                <RadzenTextBox @bind-Value="@modificaNome" Style="width: 100%; height: 42px;" />
+                                            </RadzenFormField>
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="6">
+                                            <RadzenFormField Text="Cognome" Style="width:100%">
+                                                <RadzenTextBox @bind-Value="@modificaCognome" Style="width: 100%; height: 42px;" />
+                                            </RadzenFormField>
+                                        </RadzenColumn>
+                                    </RadzenRow>
+
+                                    <RadzenFormField Text="Dipartimento" Style="width:100%">
+                                        <RadzenTextBox @bind-Value="@modificaDipartimento" Style="width: 100%; height: 42px;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Data di Nascita" Style="width:100%">
+                                        <RadzenDatePicker @bind-Value="@modificaDataNascita" DateFormat="dd/MM/yyyy" Style="width:100%" />
+                                    </RadzenFormField>
+
+                                    @* 
+                                        Upload foto: InputFile nativo Blazor, max 5MB.
+                                        Il file viene letto in byte[] e convertito in base64 per l'anteprima.
+                                        Al salvataggio, i byte vengono inviati al DB (colonna FotoUrl varbinary).
+                                    *@
+                                    <RadzenFormField Text="Foto Profilo" Style="width:100%">
+                                        <InputFile OnChange="@OnFotoCambiata" Class="form-control" accept="image/*" />
+                                        @if (modificaFotoPreview != null)
+                                        {
+                                            <div style="margin-top: 8px;">
+                                                <img src="@modificaFotoPreview" style="max-width: 120px; max-height: 120px; border-radius: 8px;" />
+                                            </div>
+                                        }
+                                    </RadzenFormField>
+
+                                    @* Messaggio di conferma/errore dopo il salvataggio *@
+                                    @if (!string.IsNullOrEmpty(messaggioModifica))
+                                    {
+                                        <RadzenAlert AlertStyle="@(successoModifica ? AlertStyle.Success : AlertStyle.Danger)" Variant="Variant.Flat">
+                                            @messaggioModifica
+                                        </RadzenAlert>
+                                    }
+
+                                    @* Pulsanti Salva / Annulla affiancati *@
+                                    <RadzenRow>
+                                        <RadzenColumn Size="6">
+                                            <RadzenButton Text="Salva"
+                                                          Click="@SalvaModifiche"
+                                                          Style="width: 100%; background-color: var(--brand-primary); border-radius: 8px; font-weight: bold; height: 45px;" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="6">
+                                            <RadzenButton Text="Annulla"
+                                                          ButtonStyle="ButtonStyle.Light"
+                                                          Click="@AnnullaModifica"
+                                                          Style="width: 100%; border-radius: 8px; height: 45px;" />
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </RadzenStack>
+                            </RadzenCard>
+                        }
+
+                        @* ── SEZIONE CAMBIO PASSWORD ── 
+                           Visibile solo quando l'utente clicca "Cambia password".
+                           Verifica la vecchia password con BCrypt prima di aggiornare.
+                           Chiude automaticamente la sezione modifica profilo.
+                           La nuova password deve: essere uguale alla conferma, >= 6 caratteri. *@
+                        @if (mostraCambioPassword)
+                        {
+                            <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2 rz-p-8" Style="background: white; border-left: 5px solid #ff9800;">
+                                <RadzenText TextStyle="TextStyle.H5" Class="rz-mb-6" Style="font-weight: 700; color: #e65100;">Cambia Password</RadzenText>
+
+                                <RadzenStack Gap="1.5rem">
+                                    <RadzenFormField Text="Password attuale" Style="width:100%">
+                                        <RadzenPassword @bind-Value="@passwordAttuale" Style="width: 100%; height: 42px;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Nuova password" Style="width:100%">
+                                        <RadzenPassword @bind-Value="@nuovaPassword" Style="width: 100%; height: 42px;" />
+                                    </RadzenFormField>
+
+                                    <RadzenFormField Text="Conferma nuova password" Style="width:100%">
+                                        <RadzenPassword @bind-Value="@confermaPassword" Style="width: 100%; height: 42px;" />
+                                    </RadzenFormField>
+
+                                    @if (!string.IsNullOrEmpty(messaggioPassword))
+                                    {
+                                        <RadzenAlert AlertStyle="@(successoPassword ? AlertStyle.Success : AlertStyle.Danger)" Variant="Variant.Flat">
+                                            @messaggioPassword
+                                        </RadzenAlert>
+                                    }
+
+                                    <RadzenRow>
+                                        <RadzenColumn Size="6">
+                                            <RadzenButton Text="Aggiorna password"
+                                                          Click="@CambiaPassword"
+                                                          Style="width: 100%; background-color: #e65100; border-radius: 8px; font-weight: bold; height: 45px;" />
+                                        </RadzenColumn>
+                                        <RadzenColumn Size="6">
+                                            <RadzenButton Text="Annulla"
+                                                          ButtonStyle="ButtonStyle.Light"
+                                                          Click="@(() => { mostraCambioPassword = false; messaggioPassword = ""; })"
+                                                          Style="width: 100%; border-radius: 8px; height: 45px; color: #e65100; border-color: #e65100;" />
+                                        </RadzenColumn>
+                                    </RadzenRow>
+                                </RadzenStack>
+                            </RadzenCard>
+                        }
+
+                        @* ── SEZIONE POST DELL'UTENTE ── 
+                           Mostra tutti i post pubblicati dall'utente loggato (solo suoi).
+                           Ordinati dal più recente. Se non ci sono post, mostra messaggio vuoto.
+                           Badge arrotondato sulla destra con il conteggio totale. *@
+                        <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2" Style="background: white;">
+                            <div style="padding: 20px; border-bottom: 1px solid var(--brand-border);">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.7rem">
+                                        <RadzenIcon Icon="article" IconColor="var(--brand-primary)" />
+                                        <RadzenText TextStyle="TextStyle.H6" Class="rz-m-0" Style="font-weight: 700; color: var(--brand-primary);">
+                                            I tuoi post
+                                        </RadzenText>
+                                    </RadzenStack>
+                                    @* Badge col conteggio dei post *@
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Primary"
+                                                  Variant="Variant.Flat"
+                                                  Class="rz-px-3 rz-py-1"
+                                                  Style="background-color: var(--brand-primary); border-radius: 50px;">
+                                        @(posts?.Count ?? 0)
+                                    </RadzenBadge>
+                                </RadzenStack>
+                            </div>
+
+                            <div style="padding: 0;">
+                                @if (posts == null || !posts.Any())
+                                {
+                                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-color-text-secondary rz-p-6 rz-text-align-center">
+                                        Nessun post pubblicato.
+                                    </RadzenText>
+                                }
+                                else
+                                {
+                                    @* Ogni post ha: foto autore, nome, data, contenuto *@
+                                    @foreach (var post in posts)
+                                    {
+                                        <div style="padding: 20px; border-bottom: 1px solid #f0f0f0;">
+                                            <RadzenStack Gap="1rem">
+                                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                                                    @* Miniatura autore del post (42px circolare) *@
+                                                    <div style="width: 42px; height: 42px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid var(--brand-border);">
+                                                        @if (post.FotoUrl != null)
+                                                        {
+                                                            <img src="@post.FotoUrlBase64" style="width: 100%; height: 100%; object-fit: cover;" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: var(--brand-primary); color:white; font-weight:bold; font-size: 0.8rem;">
+                                                                @post.Iniziali
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <RadzenStack Gap="0">
+                                                        <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-m-0" Style="font-weight: 700; color: var(--brand-primary);">
+                                                            @post.Nome @post.Cognome
+                                                        </RadzenText>
+                                                        @* Data convertita da UTC a fuso Italia (W. Europe Standard Time) *@
+                                                        <RadzenText TextStyle="TextStyle.Caption" Style="color: #999;">
+                                                            @TimeZoneInfo.ConvertTimeFromUtc(
+                                                                DateTime.SpecifyKind(post.DataPubblicazione, DateTimeKind.Utc),
+                                                                TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time")
+                                                            ).ToString("dd MMMM yyyy, HH:mm")
+                                                        </RadzenText>
+                                                    </RadzenStack>
+                                                </RadzenStack>
+                                                <RadzenText TextStyle="TextStyle.Body1" Style="white-space: pre-wrap; line-height: 1.6; color: #2c3e50;">
+                                                    @post.Contenuto
+                                                </RadzenText>
+                                            </RadzenStack>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </RadzenCard>
+
+                    </RadzenStack>
+                </RadzenColumn>
+
+            </RadzenRow>
+        </div>
+    </div>
+</div>
+
+@code {
+    // ── DATI PRINCIPALI ──
+    private Utente utente = new();            // Utente loggato (caricato dal DB)
+    private List<PostViewModel>? posts;       // Post dell'utente
+
+    // ── STATO MODIFICA PROFILO ──
+    private bool modalitaModifica;            // true = mostra form modifica profilo
+    private string modificaNome = "";         // Valore modificato del nome
+    private string modificaCognome = "";      // Valore modificato del cognome
+    private string? modificaDipartimento;     // Valore modificato del dipartimento
+    private DateTime? modificaDataNascita;    // Valore modificato della data di nascita
+    private string? modificaFotoPreview;      // Anteprima base64 della nuova foto
+    private byte[]? modificaFotoBytes;        // Byte della nuova foto (da upload)
+    private string messaggioModifica = "";    // Messaggio feedback (successo/errore)
+    private bool successoModifica;            // true = verde, false = rosso
+
+    // ── STATO CAMBIO PASSWORD ──
+    private bool mostraCambioPassword;        // true = mostra form cambio password
+    private string passwordAttuale = "";      // Campo vecchia password
+    private string nuovaPassword = "";        // Campo nuova password
+    private string confermaPassword = "";     // Campo conferma nuova password
+    private string messaggioPassword = "";    // Messaggio feedback cambio password
+    private bool successoPassword;            // true = verde, false = rosso
+
+    // ── CICLO DI VITA ──
+    // Appena la pagina viene caricata, controlla se l'utente è loggato.
+    // Se non loggato → redirect a /login. Altrimenti carica profilo e post.
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.UtenteLoggato == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        await CaricaProfilo();
+    }
+
+    // Carica i dati dell'utente dal DB (riga completa) e i suoi post.
+    private async Task CaricaProfilo()
+    {
+        try
+        {
+            utente = await MyService.GetUtenteByIdAsync(Session.UtenteLoggato.UtenteId);
+            if (utente != null)
+                Session.Login(utente);  // Aggiorna la sessione con dati freschi
+            posts = await MyService.GetPostsByUtenteAsync(Session.UtenteLoggato.UtenteId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Errore caricamento profilo: {ex.Message}");
+        }
+    }
+
+    // ── MODIFICA PROFILO ──
+
+    // Prepara i campi del form con i dati correnti dell'utente e mostra la sezione.
+    // Nasconde la sezione cambio password se aperta.
+    private void ApriModifica()
+    {
+        modificaNome = utente.Nome;
+        modificaCognome = utente.Cognome;
+        modificaDipartimento = utente.Dipartimento;
+        modificaDataNascita = utente.DataDiNascita;
+        modificaFotoPreview = null;
+        modificaFotoBytes = null;
+        messaggioModifica = "";
+        mostraCambioPassword = false;
+        modalitaModifica = true;
+    }
+
+    private void AnnullaModifica()
+    {
+        modalitaModifica = false;
+        messaggioModifica = "";
+    }
+
+    // Quando l'utente seleziona un file, lo legge in byte[] e crea l'anteprima base64.
+    // Limite: 5MB (maxAllowedSize).
+    private void OnFotoCambiata(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            modificaFotoBytes = ms.ToArray();
+            modificaFotoPreview = $"data:image/jpeg;base64,{Convert.ToBase64String(modificaFotoBytes)}";
+        }
+    }
+
+    // Salva le modifiche profilo sul DB tramite PostService.UpdateUtenteAsync.
+    // Se è stata caricata una nuova foto, aggiorna anche FotoUrl.
+    // Poi ricarica il profilo per riflettere i cambiamenti.
+    private async Task SalvaModifiche()
+    {
+        try
+        {
+            utente.Nome = modificaNome;
+            utente.Cognome = modificaCognome;
+            utente.Dipartimento = modificaDipartimento;
+            utente.DataDiNascita = modificaDataNascita;
+            if (modificaFotoBytes != null)
+                utente.FotoUrl = modificaFotoBytes;
+
+            await MyService.UpdateUtenteAsync(utente);
+            Session.Login(utente);
+
+            modalitaModifica = false;
+            await CaricaProfilo();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            messaggioModifica = "Errore: " + ex.Message;
+        }
+    }
+
+    // ── CAMBIO PASSWORD ──
+
+    // Prepara il form (campi vuoti) e mostra la sezione cambio password.
+    // Nasconde la sezione modifica profilo se aperta.
+    private void ApriCambioPassword()
+    {
+        modalitaModifica = false;
+        passwordAttuale = "";
+        nuovaPassword = "";
+        confermaPassword = "";
+        messaggioPassword = "";
+        mostraCambioPassword = true;
+    }
+
+    // Flusso cambio password:
+    // 1. Validazione campi (tutti compilati, coincidenza, >= 6 caratteri)
+    // 2. Verifica vecchia password con BCrypt.Verify
+    // 3. Se ok, hash della nuova password con BCrypt.HashPassword
+    // 4. Salva hash sul DB tramite PostService.UpdatePasswordAsync
+    private async Task CambiaPassword()
+    {
+        successoPassword = false;
+        messaggioPassword = "";
+
+        if (string.IsNullOrWhiteSpace(passwordAttuale) || string.IsNullOrWhiteSpace(nuovaPassword) || string.IsNullOrWhiteSpace(confermaPassword))
+        {
+            messaggioPassword = "Compila tutti i campi.";
+            return;
+        }
+
+        if (nuovaPassword != confermaPassword)
+        {
+            messaggioPassword = "Le nuove password non coincidono.";
+            return;
+        }
+
+        if (nuovaPassword.Length < 6)
+        {
+            messaggioPassword = "La nuova password deve essere almeno 6 caratteri.";
+            return;
+        }
+
+        try
+        {
+            if (!BCrypt.Net.BCrypt.Verify(passwordAttuale, utente.Password))
+            {
+                messaggioPassword = "Password attuale errata.";
+                return;
+            }
+
+            var hash = BCrypt.Net.BCrypt.HashPassword(nuovaPassword);
+            await MyService.UpdatePasswordAsync(utente.UtenteId, hash);
+
+            successoPassword = true;
+            messaggioPassword = "Password aggiornata con successo!";
+            passwordAttuale = "";
+            nuovaPassword = "";
+            confermaPassword = "";
+        }
+        catch (Exception ex)
+        {
+            messaggioPassword = "Errore: " + ex.Message;
+        }
+    }
+
+    // ── UTILITY ──
+
+    // Converte byte[] in data URI base64 per visualizzare le immagini.
+    // Esempio output: data:image/jpeg;base64,/9j/4AAQ...
+    private string? ToBase64(byte[]? bytes) =>
+        bytes != null ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : null;
+}

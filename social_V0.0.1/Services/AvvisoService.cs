@@ -8,11 +8,11 @@ namespace social_V0._0._1.Services
     public class AvvisoService
     {
         private readonly string _connectionString;
-
         public AvvisoService(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
+// Solo avvisi con Attivo = true, ordinati dal più recente.
 
         public async Task<List<Avviso>> GetAvvisiAttiviAsync()
         {

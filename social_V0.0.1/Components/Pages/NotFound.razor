@@ -1,4 +1,4 @@
-﻿@page "/not-found"
+@page "/not-found"
 @page "/{**path}"
 
 <PageTitle>404 - Link non trovato</PageTitle>
@@ -53,15 +53,13 @@
     private int _attempts = 0;
 
     [Inject] NavigationManager Navigation { get; set; }
-
+// Easter egg: il pulsante scappa per i primi 3 hover, poi si ferma.
     private void MoveButton()
     {
         if (_attempts < 3)
         {
             var random = new Random();
-            int x = random.Next(-120, 120);
-            int y = random.Next(-30, 30);
-            _buttonStyle = $"transform: translate({x}px, {y}px);";
+            _buttonStyle = $"transform: translate({random.Next(-120, 120)}px, {random.Next(-30, 30)}px);";
             _attempts++;
         }
         else

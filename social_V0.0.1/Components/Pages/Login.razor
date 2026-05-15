@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @page "/login"
 @using social_V0._0._1.Services
 @inject UtenteService UtenteSvc
@@ -96,9 +96,9 @@
 
         @* FOOTER CON TERMINI E CONDIZIONI *@
         <div class="login-footer">
-            <RadzenLink Text="Termini di Servizio" Path="/eula" Style="font-size: 0.85rem; color: #999;" />
+            <a href="/legal/eula" style="font-size: 0.85rem; color: #999; text-decoration: none;">Termini di Servizio</a>
             <span style="margin: 0 10px; color: #ccc;">|</span>
-            <RadzenLink Text="Privacy Policy" Path="/privacy" Style="font-size: 0.85rem; color: #999;" />
+            <a href="/legal/privacy" style="font-size: 0.85rem; color: #999; text-decoration: none;">Privacy Policy</a>
         </div>
 
     </RadzenCard>
@@ -110,14 +110,14 @@
     private string password = "";
     private string messaggio = "";
 
+// Se già loggato, vai direttamente in home.
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato != null)
-        {
             NavManager.NavigateTo("/home");
-        }
     }
 
+// Invio nei campi triggera il login (Enter key).
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await EffettuaLogin();
@@ -130,11 +130,9 @@
             messaggio = "Inserisci credenziali valide.";
             return;
         }
-
         try
         {
             var utente = await UtenteSvc.LoginAsync(email, password);
-
             if (utente != null)
             {
                 Session.Login(utente);

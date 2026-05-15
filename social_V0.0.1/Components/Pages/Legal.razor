@@ -1,0 +1,74 @@
+@page "/legal/{Document}"
+@using System.IO
+@inject IWebHostEnvironment Env
+@inject NavigationManager Nav
+
+<PageTitle>@Titolo</PageTitle>
+
+<div class="main-container">
+    <div class="center-content">
+        <div style="width: 100%; max-width: 900px; padding: 0 24px;">
+
+            <RadzenCard Variant="Variant.Filled" Class="rz-shadow-10 rz-p-8" Style="background: white;">
+                <RadzenStack Gap="1.5rem">
+
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" Style="font-weight: 700; color: var(--brand-primary);">@Titolo</RadzenText>
+                        <RadzenButton Variant="Variant.Text" Icon="arrow_back" Text="Indietro" Click="@TornaIndietro" Style="color: var(--brand-action);" />
+                    </RadzenStack>
+
+                    <RadzenSeparator Style="background-color: var(--brand-border);" />
+
+                    @if (string.IsNullOrEmpty(Contenuto))
+                    {
+                        <RadzenText TextStyle="TextStyle.Body1" Style="color: #999;">Documento non trovato.</RadzenText>
+                    }
+                    else
+                    {
+                        <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 0.95rem; line-height: 1.7; color: #333; margin: 0; background: #fafafa; padding: 24px; border-radius: 8px; border: 1px solid #eee;">@Contenuto</pre>
+                    }
+
+                </RadzenStack>
+            </RadzenCard>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Document { get; set; } = "";
+
+    private string Contenuto = "";
+    private string Titolo => Document?.ToLower() switch
+    {
+        "privacy" => "Privacy Policy",
+        "eula" => "Termini e Condizioni",
+        _ => "Documento"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CaricaDocumento();
+    }
+
+    private async Task CaricaDocumento()
+    {
+        var nomeFile = Document?.ToLower() switch
+        {
+            "privacy" => "privacy.txt",
+            "eula" => "eula.txt",
+            _ => null
+        };
+
+        if (nomeFile == null) return;
+
+        var path = Path.Combine(Env.WebRootPath, nomeFile);
+        if (File.Exists(path))
+        {
+            Contenuto = await File.ReadAllTextAsync(path);
+        }
+    }
+
+    private void TornaIndietro() => Nav.NavigateTo("/login");
+}

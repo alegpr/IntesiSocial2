@@ -1,4 +1,4 @@
-﻿@page "/signup"
+@page "/signup"
 @using social_V0._0._1.Models
 @using social_V0._0._1.Services
 
@@ -11,7 +11,7 @@
 
 <RadzenCard class="rz-shadow-10 rz-p-12"
             style="max-width: 600px; width: 90%; border-radius: 8px; background-color: white; margin: 20px auto 50px auto;">
-    
+
     <RadzenText TextStyle="TextStyle.H4" TextAlign="TextAlign.Center"
                 Style="font-weight: 800; color: var(--brand-primary); margin-bottom: 2rem;">
         Registrazione
@@ -26,7 +26,7 @@
 
     <RadzenTemplateForm TItem="Utente" Data="@nuovoUtente" Submit="@OnSignup">
         <RadzenStack Gap="1.5rem">
-            
+
             <RadzenRow>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Nome *" Style="width:100%">
@@ -74,13 +74,13 @@
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <RadzenCheckBox @bind-Value="@accettaTermini" Name="EULA" TValue="bool" />
                 <RadzenLabel Component="EULA" Style="font-size: 0.9rem;">
-                    Accetto i <a href="/eula" target="_blank" style="color: var(--brand-action); font-weight: bold;">termini e condizioni</a>
+                    Accetto i <a href="/legal/eula" style="color: var(--brand-action); font-weight: bold;">termini e condizioni</a>
                 </RadzenLabel>
             </RadzenStack>
 
             <RadzenButton ButtonType="ButtonType.Submit" Text="REGISTRATI" Disabled="@(!accettaTermini)"
                           Style="width: 100%; background-color: var(--brand-primary); font-weight: bold; height: 48px;" />
-            
+
             <RadzenButton ButtonStyle="ButtonStyle.Light" Text="TORNA AL LOGIN"
                           Click="@(() => NavManager.NavigateTo("/login"))" Style="width: 100%; height: 48px;" />
         </RadzenStack>
@@ -92,17 +92,16 @@
     private string messaggio = "";
     private bool successo = false;
     private bool accettaTermini = false;
-    
     private IBrowserFile? fileCaricato;
 
+// Se già loggato, vai direttamente in home.
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato != null)
-        {
             NavManager.NavigateTo("/home");
-        }
     }
 
+// Salva il file in memoria; verrà convertito in byte[] al submit.
     private void OnInputFileChange(InputFileChangeEventArgs e)
     {
         fileCaricato = e.File;

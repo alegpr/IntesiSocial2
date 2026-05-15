@@ -1,28 +1,54 @@
 ﻿@page "/Error"
 @using System.Diagnostics
+@inject NavigationManager Navigation
 
-<PageTitle>Errore</PageTitle>
+<PageTitle>500 - Errore di Sistema</PageTitle>
 
-<h1 class="text-danger">Errore.</h1>
-<h2 class="text-danger">Si è verificato un errore durante l'elaborazione della richiesta.</h2>
+<div class="main-container">
+    <div class="center-content">
+        <div class="rz-shadow-10 p-5 text-center bg-white"
+             style="max-width: 600px; width: 90%; border-radius: var(--brand-radius); border-top: 6px solid #dc3545;">
 
-@if (ShowRequestId)
-{
-    <p>
-        <strong>ID Richiesta:</strong> <code>@RequestId</code>
-    </p>
-}
+            @* Codice Errore stilizzato come la 404, ma con il rosso per la 500 *@
+            <div class="display-1 fw-bold mb-3" style="color: #dc3545; opacity: 0.8;">
+                5<span style="color: var(--brand-primary)">0</span>0
+            </div>
 
-<h3>Modalità di Sviluppo</h3>
-<p>
-    Passando all'ambiente di <strong>Sviluppo</strong> verranno visualizzate informazioni più dettagliate sull'errore.
-</p>
-<p>
-    <strong>L'ambiente di Sviluppo non dovrebbe essere abilitato per le applicazioni distribuite.</strong>
-    Potrebbe mostrare informazioni sensibili dalle eccezioni agli utenti finali.
-    Per il debug locale, abilita l'ambiente di <strong>Sviluppo</strong> impostando la variabile d'ambiente <strong>ASPNETCORE_ENVIRONMENT</strong> su <strong>Development</strong>
-    e riavviando l'app.
-</p>
+            <h2 class="mb-3" style="color: #333; font-weight: 700;">Ops! Qualcosa è andato storto</h2>
+
+            <p class="mb-4" style="color: #666; line-height: 1.6;">
+                Abbiamo setacciato ogni riga di codice, ma sembra che il sistema abbia incontrato un ostacolo imprevisto.
+                Un errore interno ha interrotto la comunicazione, ma i nostri sistemi di monitoraggio sono già al lavoro.
+            </p>
+
+            @if (ShowRequestId)
+            {
+                <div class="alert alert-light border mb-4" style="background-color: #f8f9fa; border-radius: var(--brand-radius);">
+                    <small class="text-muted d-block mb-1">Codice tracciamento errore:</small>
+                    <code style="color: var(--brand-primary); font-weight: bold;">@RequestId</code>
+                </div>
+            }
+
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <button @onclick='() => Navigation.NavigateTo("/")'
+                        class="rz-button rz-button-md rz-variant-flat rz-primary"
+                        style="background-color: var(--brand-primary) !important; min-width: 200px;">
+                    <span class="rz-button-box">
+                        <i class="rz-button-icon-left rzi">refresh</i>
+                        <span class="rz-button-text">Riprova ora</span>
+                    </span>
+                </button>
+            </div>
+
+            @* Footer tecnico *@
+            <div class="mt-5 pt-3" style="border-top: 1px solid var(--brand-border);">
+                <small style="color: var(--brand-primary); font-style: italic; font-weight: 500;">
+                    "Il codice è perfetto, è la realtà che a volte sbaglia."
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     [CascadingParameter]

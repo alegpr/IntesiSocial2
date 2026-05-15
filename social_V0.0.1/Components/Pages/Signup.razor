@@ -6,7 +6,10 @@
 
 @inject IConfiguration Config
 @inject NavigationManager NavManager
+@inject social_V0._0._1.Services.SessionService Session
 @rendermode InteractiveServer
+
+<PageTitle>SignUp</PageTitle>
 
 <RadzenCard class="rz-shadow-10 rz-p-12"
             style="max-width: 600px; width: 90%; border-radius: 8px; background-color: white; margin: 20px auto 50px auto;">
@@ -92,8 +95,15 @@
     private bool successo = false;
     private bool accettaTermini = false;
     
-    // File nativo di Blazor
     private IBrowserFile? fileCaricato;
+
+    protected override void OnInitialized()
+    {
+        if (Session.UtenteLoggato != null)
+        {
+            NavManager.NavigateTo("/home");
+        }
+    }
 
     private void OnInputFileChange(InputFileChangeEventArgs e)
     {

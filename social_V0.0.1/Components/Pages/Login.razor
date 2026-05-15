@@ -10,16 +10,16 @@
 @inject SessionService Session
 @rendermode InteractiveServer
 
+<PageTitle>Login</PageTitle>
+
 <RadzenCard class="rz-shadow-10 rz-p-12 login-card">
-    
-    @* Intestazione della Card *@
+
     <RadzenText TextStyle="TextStyle.H4"
                 Class="rz-text-align-center rz-mb-6"
                 Style="font-weight: 800; color: var(--brand-primary); font-family: 'Segoe UI', sans-serif;">
         Accedi
     </RadzenText>
-    
-    @* Visualizzazione messaggi di errore *@
+
     @if (!string.IsNullOrEmpty(messaggio))
     {
         <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
@@ -27,25 +27,28 @@
         </RadzenAlert>
     }
 
-    @* Componente di Login Radzen con localizzazione in italiano *@
-    <RadzenLogin UserText="Email"
-                 PasswordText="Password"
-                 LoginText="Accedi"
-                 AllowRegister="true"
-                 RegisterMessageText="Non sei registrato?"
-                 RegisterText="Crea account"
-                 AllowRememberMe="false"
-                 AllowResetPassword="true"
-                 ResetPasswordText="Password dimenticata?"
-                 Login="@OnLogin"
-                 Register="@(() => NavManager.NavigateTo("/signup"))"
-                 ResetPassword="@(() => NavManager.NavigateTo("/recovery"))"
-                 Style="--rz-primary: var(--brand-action);
-    --rz-button-primary-backgroun-color: var(--brand-primary);
-    --rz-button-border-radius: var(--brand-radius);" />
+    @* Usiamo un contenitore che intercetta il tasto Invio *@
+    <div @onkeydown="@HandleKeyDown">
+        <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Email</RadzenText>
+        <RadzenTextBox @bind-Value="@email" Class="w-100 rz-mb-4" placeholder="Inserisci email..." />
 
-    @* Footer della card con link legale *@
-    <div class="login-footer">
+        <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Password</RadzenText>
+        <RadzenPassword @bind-Value="@password" Class="w-100 rz-mb-4" placeholder="Inserisci password..." />
+
+        <RadzenButton Text="Accedi"
+                      Click="@EffettuaLogin"
+                      Class="w-100 rz-mt-4"
+                      Style="background-color: var(--brand-primary); border-radius: var(--brand-radius);" />
+
+        <div class="rz-text-align-center rz-mt-4">
+            <RadzenText TextStyle="TextStyle.Body2">
+                Non sei registrato?
+                <RadzenLink Text="Crea account" Path="/signup" />
+            </RadzenText>
+        </div>
+    </div>
+
+    <div class="login-footer rz-mt-6">
         <RadzenLink Text="Termini e condizioni"
                     Path="/eula"
                     Style="font-size: 0.9rem; color: var(--brand-action); font-weight: 600;" />
@@ -54,23 +57,42 @@
 </RadzenCard>
 
 @code {
+    private string email = "";
+    private string password = "";
     private string messaggio = "";
 
-    /// <summary>
-    /// Gestisce il processo di autenticazione dell'utente
-    /// </summary>
-    async Task OnLogin(LoginArgs args)
+    protected override void OnInitialized()
     {
+        if (Session.UtenteLoggato != null)
+        {
+            NavManager.NavigateTo("/home");
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await EffettuaLogin();
+        }
+    }
+
+    private async Task EffettuaLogin()
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            messaggio = "Inserisci credenziali valide.";
+            return;
+        }
+
         try
         {
             using (var db = new SqlConnection(Config.GetConnectionString("DefaultConnection")))
             {
-                // Ricerca dell'utente tramite email (username nel form)
                 var sql = "SELECT * FROM dbo.Utenti WHERE Email = @User";
-                var utente = await db.QueryFirstOrDefaultAsync<Utente>(sql, new { User = args.Username });
+                var utente = await db.QueryFirstOrDefaultAsync<Utente>(sql, new { User = email });
 
-                // Validazione delle credenziali tramite BCrypt
-                if (utente != null && BCrypt.Verify(args.Password, utente.Password))
+                if (utente != null && BCrypt.Verify(password, utente.Password))
                 {
                     Session.Login(utente);
                     NavManager.NavigateTo("/home", forceLoad: true);
@@ -81,7 +103,7 @@
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             messaggio = "Errore di connessione al database.";
         }

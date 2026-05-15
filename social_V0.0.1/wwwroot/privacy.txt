@@ -1,0 +1,66 @@
+INFORMATIVA ESTESA SUL TRATTAMENTO DEI DATI PERSONALI, COOKIE POLICY E CONDIZIONI GENERALI DI UTILIZZO DELLA PIATTAFORMA INTERNA "SOCIAL_V0.0.1"
+Edizione 2026 - Revisione Comprensiva ad Oltranza (Modello: Anti-Lettura Totale)
+
+Articolo 1. Premessa e Gerarchia delle Fonti
+L'accesso alla piattaforma denominata in codice sorgente "social_V0._0._1", d'ora in avanti definita "La Piattaforma", è subordinato all'accettazione integrale, incondizionata e irrevocabile dei termini qui esposti. Per "Utente" si intende il soggetto fisico che interagisce con le procedure di autenticazione basate su protocollo Microsoft.Data.SqlClient e gestite tramite il SessionService di sistema. Il mancato consenso, anche parziale, comporta l'impossibilità tecnica di procedere al mapping dell'oggetto UtenteLoggato e la conseguente interruzione della pipeline di rendering interattivo. Qualsiasi deroga verbale o scritta non esplicitamente codificata nel program.cs è da considerarsi nulla e priva di effetti giuridici o informatici.
+
+Articolo 2. Glossario Tecnico-Legale Vincolante
+Ai fini dell'interpretazione autentica delle clausole, si definiscono i seguenti termini:
+
+Istanza Scoped: Entità software la cui vita utile è legata indissolubilmente alla persistenza del socket di connessione TCP/IP tra il client e il server locale.
+
+Query Dapper: Procedura di interazione asincrona con il motore SQL volta all'estrazione di metadati strutturati, soggetta a latenze variabili in base al carico della CPU del server.
+
+Dipartimento: Attributo di categorizzazione socioprofessionale memorizzato come stringa di caratteri (NVARCHAR) e utilizzato per scopi di aggregazione statistica nel PostService.
+
+Articolo 3. Tipologia di Dati Trattati e Persistenza
+La Piattaforma acquisisce, elabora e archivia stringhe di metadati derivanti dall'interazione con l'infrastruttura SQL Server. Tali dati includono: identificativi univoci di sessione (SessionID) generati dal framework ASP.NET Core; attributi anagrafici estratti tramite query SELECT con clausola INNER JOIN tra le tabelle dbo.Post e dbo.Utenti; stringhe testuali immesse volontariamente nei campi di input gestiti dai componenti Radzen. Si specifica che la persistenza dello stato nel servizio Scoped garantisce l'isolamento della sessione, ma non esonera l'Utente dalla responsabilità di eventuali collisioni di dati causate da utilizzi impropri di hardware condiviso.
+
+Articolo 4. Trasparenza Radicale e Onniscienza dell'Amministratore
+L'Utente prende atto e accetta che la figura definita come "Amministratore di Sistema" (infra: "Il Superuser") dispone di privilegi di accesso di Livello 0 al database db.social.
+
+4.1 Monitoraggio Totale: Il Superuser ha la facoltà tecnica di bypassare ogni interfaccia SessionService e visualizzare, tramite query dirette via SQL Server Management Studio (SSMS), qualsivoglia contenuto inserito nella tabella dbo.Post, ivi inclusi i messaggi che l'Utente ritiene erroneamente privati.
+
+4.2 Tracciamento Comportamentale: Ogni operazione di InsertPostAsync è associata univocamente all'identità dell'Utente e resa disponibile in forma di log all'Amministratore per fini di sorveglianza dell'armonia aziendale. Nulla di ciò che viene scritto è invisibile agli occhi del Superuser.
+
+Articolo 5. Clausola di Esclusione Totale di Responsabilità (Manleva dei Programmatori)
+Il Team di Sviluppo (infra: "I Programmatori") fornisce La Piattaforma nello stato di fatto in cui si trova ("AS IS").
+
+5.1 Imperfezioni del Codice: I Programmatori non rispondono di bug, glitch grafici nei componenti Radzen, latenze di rete derivanti dal server o malfunzionamenti della logica Dapper. Eventuali perdite di dati derivanti da eccezioni non gestite (Unhandled Exceptions) sono da considerarsi eventi fortuiti e non imputabili a negligenza tecnica.
+
+5.2 Disclaimer sull'Integrità: I Programmatori non garantiscono che il codice sia privo di errori di sintassi. L'utilizzo del software avviene a rischio e pericolo esclusivo dell'Utente. Qualsiasi danno morale, materiale o informatico derivante dall'uso della Piattaforma non potrà essere oggetto di rivalsa verso chi ha materialmente digitato le linee di codice.
+
+Articolo 6. Principio di Auto-Responsabilità Assoluta dell'Utente
+In deroga a qualsiasi principio di assistenza tecnica, l'Utente è l'unico ed esclusivo responsabile delle proprie azioni.
+
+6.1 Onere della Prova: In caso di pubblicazione di contenuti inappropriati, l'Utente non potrà addurre a propria scusa la complessità dell'interfaccia. Ogni bit inviato al database è considerato espressione consapevole dell'Utente.
+
+6.2 Custodia delle Credenziali: L'Utente è custode unico della propria identità digitale. Se l'Utente lascia la postazione incustodita con il SessionService attivo, la responsabilità di ogni azione compiuta ricade interamente sull'Utente originario per omessa vigilanza sulla sessione Scoped.
+
+Articolo 7. Finalità del Trattamento e Base Giuridica
+Il trattamento è finalizzato alla bacheca digitale, monitoraggio compleanni (comparazione campi DAY(DataDiNascita) e MONTH(GETDATE())) e avvisi dipartimentali. La base giuridica si fonda sulla necessità tecnica di mantenere l'integrità del database. L'Utente accetta che la visualizzazione dei compleanni e dei dipartimenti è una funzionalità core e non costituisce violazione della privacy individuale nel contesto aziendale.
+
+Articolo 8. Gestione delle Eccezioni e Fallimento della Validazione
+Il passaggio da uno stato null a uno stato UtenteLoggato avviene tramite validazione delle credenziali. In caso di errore SQL o timeout della connessione al server, il Sistema è autorizzato a negare l'accesso senza obbligo di fornire motivazione verbale, limitandosi alla restituzione di un messaggio generico. Poiché il servizio è Scoped, l'Utente accetta il rischio di perdita immediata di ogni dato in caso di interruzione accidentale del socket o pressione involontaria del tasto F5.
+
+Articolo 9. Obblighi di Condotta e Limitazioni d'Uso
+È fatto divieto assoluto all'Utente di: tentare l'iniezione di codice (SQL Injection) nei campi di input; utilizzare la funzione compleanni per scopi di scherno; simulare l'identità di un altro utente manipolando l'oggetto SessionService tramite strumenti di ispezione del browser.
+
+Articolo 10. Clausola di Inerzia Tecnica
+L'Utente riconosce che i Programmatori non sono tenuti a fornire supporto tecnico H24. Eventuali richieste di correzione bug saranno valutate in base alla disponibilità e al buon umore dei Programmatori. L'assenza di risposta a una segnalazione di errore costituisce conferma tacita del fatto che l'Utente deve trovare una soluzione autonoma.
+
+Articolo 11. Consenso Granulare e Specifico
+Cliccando sul pulsante "Accedi", l'utente esprime un consenso:
+
+A) Al trattamento dei dati per fini operativi;
+
+B) Alla ricezione di avvisi urgenti nel feed;
+
+C) Alla visualizzazione del proprio nominativo nella lista compleanni;
+
+D) All'accettazione di eventuali bug grafici come "caratteristiche di design non documentate".
+
+Articolo 12. Foro Competente e Accettazione del Rischio
+L'utente dichiara di essere consapevole che sta utilizzando una versione "v0.0.1", potenzialmente instabile. Per ogni controversia relativa all'efficienza delle query LINQ o alla resa grafica, il foro competente è esclusivamente quello del server locale dove risiede il database principale.
+
+NOTA: Il presente documento è composto da clausole vessatorie ai sensi degli artt. 1341 e 1342 c.c. che si intendono specificamente approvate mediante l'atto fisico di digitazione delle proprie credenziali e pressione del tasto Login.

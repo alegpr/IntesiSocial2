@@ -1,5 +1,74 @@
 ﻿@page "/not-found"
-@layout MainLayout
+@page "/{**path}"
 
-<h3>Pagina Non Trovata</h3>
-<p>Il contenuto che stai cercando non esiste.</p>
+<PageTitle>404 - Post Perduto</PageTitle>
+
+@* Utilizziamo le classi del tuo CSS: main-container per il gradiente e center-content per la centratura *@
+<div class="main-container">
+    <div class="center-content">
+
+        @* La card ora segue lo stile della tua .login-card *@
+        <div class="rz-shadow-10 p-5 text-center bg-white"
+             style="max-width: 500px; width: 90%; border-radius: var(--brand-radius); border-top: 6px solid var(--brand-primary);">
+
+            @* Icona o numero con colore istituzionale *@
+            <div class="display-1 fw-bold mb-3" style="color: var(--brand-primary); opacity: 0.8;">
+                4<span style="color: var(--brand-border)">0</span>4
+            </div>
+
+            <h2 class="mb-4" style="color: #333; font-weight: 700;">Ops! Pagina non trovata</h2>
+
+            <p class="mb-4" style="color: #666; line-height: 1.6;">
+                Abbiamo setacciato ogni riga di codice e ogni server, ma questa pagina sembra aver dato le dimissioni.
+            </p>
+
+            @* Contenitore Easter Egg *@
+            <div class="easter-egg-container" style="height: 60px; position: relative; display: flex; align-items: center; justify-content: center;">
+                <button @onmouseover="MoveButton"
+                        @onclick="GoHome"
+                        class="rz-button rz-button-md rz-variant-flat rz-primary"
+                        style="background-color: var(--brand-primary) !important; color: white; transition: all 0.2s ease; position: relative; z-index: 10; @_buttonStyle">
+                    <span class="rz-button-box">
+                        <i class="rz-button-icon-left rzi">home</i>
+                        <span class="rz-button-text">Torna alla Home</span>
+                    </span>
+                </button>
+            </div>
+
+            @* Footer della card coerente con lo stile della login-footer *@
+            <div class="mt-5 pt-3" style="border-top: 1px solid var(--brand-border);">
+                <small style="color: var(--brand-primary); font-style: italic; font-weight: 500;">
+                    "Il resto del social funziona meglio di questa pagina. Promesso."
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? path { get; set; }
+
+    private string _buttonStyle = "";
+    private int _attempts = 0;
+
+    [Inject] NavigationManager Navigation { get; set; }
+
+    private void MoveButton()
+    {
+        if (_attempts < 3)
+        {
+            var random = new Random();
+            int x = random.Next(-120, 120);
+            int y = random.Next(-30, 30);
+            _buttonStyle = $"transform: translate({x}px, {y}px);";
+            _attempts++;
+        }
+        else
+        {
+            _buttonStyle = "transform: translate(0, 0);";
+        }
+    }
+
+    private void GoHome() => Navigation.NavigateTo("/");
+}

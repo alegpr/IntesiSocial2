@@ -80,7 +80,7 @@ namespace social_V0._0._1.Services
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                var sql = @"SELECT Nome, Cognome FROM dbo.Utenti 
+                var sql = @"SELECT Nome, Cognome, FotoUrl FROM dbo.Utenti 
                     WHERE DAY(DataDiNascita) = DAY(GETDATE()) 
                     AND MONTH(DataDiNascita) = MONTH(GETDATE())";
                 var result = await connection.QueryAsync<Utente>(sql);

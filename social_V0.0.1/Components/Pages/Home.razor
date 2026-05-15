@@ -157,7 +157,11 @@
                                         <RadzenSeparator Style="background-color: var(--brand-border); opacity: 0.3;" />
                                         
                                         <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
-                                            <RadzenButton Variant="Variant.Text" Icon="favorite_border" Text="Mi piace" Style="color: var(--brand-action);" />
+                                            <RadzenButton Variant="Variant.Text"
+                                                          Icon="@(post.IsLikedByMe ? "favorite" : "favorite_border")"
+                                                          Text="@(post.LikeCount > 0 ? post.LikeCount.ToString() : "")"
+                                                          Style="@(post.IsLikedByMe ? "color: #ed4956;" : "color: var(--brand-action);")"
+                                                          Click="@(() => GestisciLike(post))" />
                                             <RadzenButton Variant="Variant.Text" Icon="chat_bubble_outline" Text="Commenta" Style="color: var(--brand-action);" />
                                         </RadzenStack>
                                     </RadzenStack>
@@ -192,7 +196,7 @@
         utenteLoggato = Session.UtenteLoggato;
         await CaricaDati();
 
-        // 3. Auto-refresh feed ogni 10 secondi
+        // 3. Auto-refresh feed ogni 0.5 secondi
         _cts = new CancellationTokenSource();
         _ = AutoRefreshLoop(_cts.Token);
     }
@@ -223,13 +227,34 @@
     {
         try
         {
-            posts = await MyService.GetAllPostsAsync();
+            posts = await MyService.GetAllPostsAsync(utenteLoggato.UtenteId);
             listaAvvisi = await MyService.GetAvvisiAttiviAsync();
             listaCompleanni = await MyService.GetCompleanniOggiAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Errore: {ex.Message}");
+        }
+    }
+
+    private async Task GestisciLike(PostViewModel post)
+    {
+        if (utenteLoggato == null) return;
+
+        try
+        {
+            // Ottimizzazione UI immediata
+            post.IsLikedByMe = !post.IsLikedByMe;
+            if (post.IsLikedByMe) post.LikeCount++; else post.LikeCount--;
+
+            // Chiamata al database tramite il Service
+            await MyService.ToggleLikeAsync(post.PostId, utenteLoggato.UtenteId);
+        }
+        catch (Exception ex)
+        {
+            // Se c'è un errore, ricarichiamo per ripristinare lo stato reale
+            await CaricaDati();
+            Console.WriteLine($"Errore Like: {ex.Message}");
         }
     }
 

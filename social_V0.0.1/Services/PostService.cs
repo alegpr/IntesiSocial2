@@ -34,6 +34,31 @@ namespace social_V0._0._1.Services
             }
             return null; // Se restituisce null, il database è vuoto!
         }
+        public async Task ToggleLikeAsync(int postId, int utenteId)
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                // Controlliamo se il like esiste già
+                var esiste = await db.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(1) FROM dbo.PostLikes WHERE PostId = @PostId AND UtenteId = @UtenteId",
+                    new { PostId = postId, UtenteId = utenteId });
+
+                if (esiste > 0)
+                {
+                    // Se esiste, lo togliamo (Unlike)
+                    await db.ExecuteAsync(
+                        "DELETE FROM dbo.PostLikes WHERE PostId = @PostId AND UtenteId = @UtenteId",
+                        new { PostId = postId, UtenteId = utenteId });
+                }
+                else
+                {
+                    // Se non esiste, lo aggiungiamo (Like)
+                    await db.ExecuteAsync(
+                        "INSERT INTO dbo.PostLikes (PostId, UtenteId) VALUES (@PostId, @UtenteId)",
+                        new { PostId = postId, UtenteId = utenteId });
+                }
+            }
+        }
         public async Task InsertPostAsync(int utenteId, string contenuto)
         {
             if (string.IsNullOrWhiteSpace(contenuto)) return;
@@ -45,37 +70,28 @@ namespace social_V0._0._1.Services
                 await connection.ExecuteAsync(sql, new { uId = utenteId, cont = contenuto });
             }
         }
-        public async Task<List<PostViewModel>> GetAllPostsAsync()
+        public async Task<List<PostViewModel>> GetAllPostsAsync(int mioUtenteId)
         {
-            var lista = new List<PostViewModel>();
-            using (var connection = new SqlConnection(_connectionString))
+            using (var db = new SqlConnection(_connectionString))
             {
-                string sql = @"SELECT P.PostId, P.Contenuto, P.DataPubblicazione, 
-                                      U.Nome, U.Cognome, U.Dipartimento, U.FotoUrl
-                               FROM dbo.Post P
-                               INNER JOIN dbo.Utenti U ON P.UtenteId = U.UtenteId
-                               ORDER BY P.DataPubblicazione DESC";
+                // Query ottimizzata: recupera post, autore, conteggio like e stato del mio like
+                string sql = @"
+            SELECT 
+                P.PostId, P.Contenuto, P.DataPubblicazione, 
+                U.Nome, U.Cognome, U.Dipartimento, U.FotoUrl,
+                (SELECT COUNT(*) FROM dbo.PostLikes WHERE PostId = P.PostId) AS LikeCount,
+                CAST(CASE WHEN EXISTS (
+                    SELECT 1 FROM dbo.PostLikes 
+                    WHERE PostId = P.PostId AND UtenteId = @MioId
+                ) THEN 1 ELSE 0 END AS BIT) AS IsLikedByMe
+            FROM dbo.Post P
+            INNER JOIN dbo.Utenti U ON P.UtenteId = U.UtenteId
+            ORDER BY P.DataPubblicazione DESC";
 
-                var command = new SqlCommand(sql, connection);
-                await connection.OpenAsync();
-                using (var reader = await command.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        lista.Add(new PostViewModel
-                        {
-                            PostId = (int)reader["PostId"],
-                            Contenuto = reader["Contenuto"].ToString(),
-                            DataPubblicazione = (DateTime)reader["DataPubblicazione"],
-                            Nome = reader["Nome"]?.ToString() ?? "",
-                            Cognome = reader["Cognome"]?.ToString() ?? "",
-                            Dipartimento = reader["Dipartimento"]?.ToString() ?? "N/D",
-                            FotoUrl = reader["FotoUrl"] as byte[]
-                        });
-                    }
-                }
+                // Usiamo Dapper per mappare tutto automaticamente al ViewModel
+                var result = await db.QueryAsync<PostViewModel>(sql, new { MioId = mioUtenteId });
+                return result.ToList();
             }
-            return lista;
         }
         public async Task<List<Avviso>> GetAvvisiAttiviAsync()
         {

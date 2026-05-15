@@ -1,4 +1,4 @@
-﻿@page "/home"
+@page "/home"
 @implements IDisposable
 @using System
 @using social_V0._0._1.Models
@@ -16,7 +16,7 @@
 <div class="main-container">
     <div class="center-content">
         <div style="width: 100%; max-width: 1600px; padding: 0 24px;">
-            
+
             @if (!string.IsNullOrEmpty(messaggioErrore))
             {
                 <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
@@ -25,11 +25,11 @@
             }
 
             <RadzenRow Gap="2.5rem">
-                
+
                 @* --- COLONNA SINISTRA --- *@
                 <RadzenColumn Size="12" SizeMD="3">
                     <RadzenStack Gap="1.5rem" Style="position: sticky; top: 85px;">
-                        
+
                         @if (utenteLoggato != null)
                         {
                             <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2" Style="text-align: center; border-top: 5px solid var(--brand-primary); background: white;">
@@ -59,7 +59,7 @@
                             <RadzenStack Gap="1rem" Class="rz-mt-4">
                                 @if (listaCompleanni == null || !listaCompleanni.Any())
                                 {
-                                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-color-text-secondary">Nessun compleanno oggi 🎂</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-color-text-secondary">Nessun compleanno oggi ??</RadzenText>
                                 }
                                 else
                                 {
@@ -110,7 +110,7 @@
 
                 <RadzenColumn Size="12" SizeMD="9">
                     <RadzenStack Gap="2rem">
-                        
+
                         <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2 rz-p-8" Style="background: white;">
                             <RadzenStack Gap="1.5rem">
                                 <div style="display: flex; gap: 20px; align-items: flex-start;">
@@ -179,7 +179,7 @@
                                         </div>
 
                                         <RadzenSeparator Style="background-color: var(--brand-border); opacity: 0.3;" />
-                                        
+
                                         <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
                                             <RadzenButton Variant="Variant.Text"
                                                           Icon="@(post.IsLikedByMe ? "favorite" : "favorite_border")"
@@ -200,37 +200,34 @@
 </div>
 
 @code {
-    private List<PostViewModel> posts;
-    private List<Avviso> listaAvvisi;
-    private List<Utente> listaCompleanni;
-    private Utente utenteLoggato;
-    private string nuovoPostContenuto = "";
-    private string? messaggioErrore;
-    private CancellationTokenSource? _cts;
+    private List<PostViewModel> posts;            // Feed completo dei post
+    private List<Avviso> listaAvvisi;              // Avvisi aziendali attivi
+    private List<Utente> listaCompleanni;          // Utenti che compiono gli anni oggi
+    private Utente utenteLoggato;                  // Utente correntemente loggato
+    private string nuovoPostContenuto = "";        // Testo del nuovo post in fase di scrittura
+    private string? messaggioErrore;               // Eventuale messaggio di errore visibile in pagina
+    private CancellationTokenSource? _cts;         // Token per fermare il loop di auto-refresh
 
+// All'avvio: controlla la sessione, carica feed/avvisi/compleanni, avvia l'auto-refresh ogni 500ms.
     protected override async Task OnInitializedAsync()
     {
-        // 1. Controlla la sessione
         if (Session.UtenteLoggato == null)
         {
             NavManager.NavigateTo("/login");
             return;
         }
-
-        // 2. Assegna l'utente e carica i dati
         utenteLoggato = Session.UtenteLoggato;
         await CaricaDati();
-
-        // 3. Auto-refresh feed ogni 0.5 secondi
         _cts = new CancellationTokenSource();
         _ = AutoRefreshLoop(_cts.Token);
     }
 
+// Loop infinito che ricarica i dati ogni 500ms per mantenere il feed aggiornato in tempo reale.
     private async Task AutoRefreshLoop(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+            await Task.Delay(500, ct);
             if (!ct.IsCancellationRequested)
             {
                 await InvokeAsync(async () =>
@@ -242,12 +239,14 @@
         }
     }
 
+// Ferma l'auto-refresh quando l'utente esce dalla pagina.
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
     }
 
+// Carica post, avvisi e compleanni dal DB. In caso di errore mostra un alert in pagina.
     private async Task CaricaDati()
     {
         try
@@ -260,31 +259,27 @@
         catch (Exception ex)
         {
             messaggioErrore = $"Errore caricamento dati: {ex.Message}";
-            Console.WriteLine($"Errore: {ex.Message}");
         }
     }
 
+// Toggle like: aggiorna subito l'interfaccia (ottimismo), poi chiama il DB. Se fallisce, ricarica lo stato reale.
     private async Task GestisciLike(PostViewModel post)
     {
         if (utenteLoggato == null) return;
-
         try
         {
-            // Ottimizzazione UI immediata
             post.IsLikedByMe = !post.IsLikedByMe;
             if (post.IsLikedByMe) post.LikeCount++; else post.LikeCount--;
-
-            // Chiamata al database tramite il Service
             await PostSvc.ToggleLikeAsync(post.PostId, utenteLoggato.UtenteId);
         }
         catch (Exception ex)
         {
-            // Se c'è un errore, ricarichiamo per ripristinare lo stato reale
             await CaricaDati();
             Console.WriteLine($"Errore Like: {ex.Message}");
         }
     }
 
+// Pubblica un nuovo post: lo salva nel DB, ricarica il feed e pulisce il campo di testo.
     private async Task PubblicaPost()
     {
         if (!string.IsNullOrWhiteSpace(nuovoPostContenuto) && utenteLoggato != null)
@@ -299,7 +294,6 @@
             catch (Exception ex)
             {
                 messaggioErrore = $"Errore pubblicazione: {ex.Message}";
-                Console.WriteLine($"Errore: {ex.Message}");
             }
         }
     }

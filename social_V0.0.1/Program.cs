@@ -6,24 +6,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- REGISTRAZIONE DEI SERVIZI (Dependency Injection) ---
 
-// Cambiato in Singleton per mantenere i dati dell'utente loggato tra le pagine
+// Singleton per mantenere lo stato utente tra le pagine
 builder.Services.AddSingleton<SessionService>();
 builder.Services.AddSingleton<PostService>();
 builder.Services.AddSingleton<UtenteService>();
 builder.Services.AddSingleton<AvvisoService>();
 
-// Supporto per componenti Razor e Rendering Interattivo (Server-side)
+// Componenti Razor interattivi (Server-side) + Radzen
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
-// Iniezione dei componenti e delle utility grafiche Radzen
 builder.Services.AddRadzenComponents();
 
 var app = builder.Build();
 
 // --- CONFIGURAZIONE DELLA PIPELINE HTTP (Middleware) ---
 
-// Gestione degli errori e sicurezza HSTS per ambienti di produzione
+// Error handling + HSTS solo in produzione
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -31,17 +29,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Abilitazione dei file statici (CSS, immagini, JS di Radzen)
 app.UseStaticFiles();
-
-// Protezione contro attacchi Cross-Site Request Forgery (CSRF)
 app.UseAntiforgery();
-
-// Ottimizzazione del caricamento degli asset statici (Funzionalità .NET 9)
 app.MapStaticAssets();
-
-// Configurazione del componente root 'App' e attivazione della modalità interattiva
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

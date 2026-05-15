@@ -1,4 +1,4 @@
-﻿namespace social_V0._0._1.Models
+namespace social_V0._0._1.Models
 {
     public class Avviso
     {

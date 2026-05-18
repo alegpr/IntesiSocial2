@@ -1,17 +1,26 @@
+@* ────────────────────────────────────────────────────────────────────────
+   NotFound.razor — Pagina 404 personalizzata.
+   Route catch-all "/{**path}" cattura qualsiasi URL non mappato.
+   Design:
+     Card centrata con stile coerente al brand.
+     Numero "404" con zero in evidenza (brand-border).
+     Testo ironico coerentemente con lo spirito del social.
+     Easter egg: il pulsante "Torna alla Home" scappa via
+     per i primi 3 hover (MoveButton), poi si ferma.
+   ──────────────────────────────────────────────────────────────────────── *@
 @page "/not-found"
 @page "/{**path}"
 
 <PageTitle>404 - Link non trovato</PageTitle>
 
-@* Utilizziamo le classi del tuo CSS: main-container per il gradiente e center-content per la centratura *@
 <div class="main-container">
     <div class="center-content">
 
-        @* La card ora segue lo stile della tua .login-card *@
+        @* Card 404: stile coerente con login-card del brand *@
         <div class="rz-shadow-10 p-5 text-center bg-white"
              style="max-width: 500px; width: 90%; border-radius: var(--brand-radius); border-top: 6px solid var(--brand-primary);">
 
-            @* Icona o numero con colore istituzionale *@
+            @* Numero 404: brand-primary per "4", brand-border per "0" *@
             <div class="display-1 fw-bold mb-3" style="color: var(--brand-primary); opacity: 0.8;">
                 4<span style="color: var(--brand-border)">0</span>4
             </div>
@@ -22,7 +31,7 @@
                 Abbiamo setacciato ogni riga di codice e ogni server, ma questa pagina sembra aver dato le dimissioni.
             </p>
 
-            @* Contenitore Easter Egg *@
+            @* Contenitore pulsante (easter egg: scappa via per i primi 3 hover) *@
             <div class="easter-egg-container" style="height: 60px; position: relative; display: flex; align-items: center; justify-content: center;">
                 <button @onmouseover="MoveButton"
                         @onclick="GoHome"
@@ -35,7 +44,7 @@
                 </button>
             </div>
 
-            @* Footer della card coerente con lo stile della login-footer *@
+            @* Footer ironico con lo spirito del brand *@
             <div class="mt-5 pt-3" style="border-top: 1px solid var(--brand-border);">
                 <small style="color: var(--brand-primary); font-style: italic; font-weight: 500;">
                     "Il resto del social funziona meglio di questa pagina. Promesso."
@@ -46,14 +55,23 @@
 </div>
 
 @code {
+    // Parametro catturato dal route catch-all "{**path}".
     [Parameter]
     public string? path { get; set; }
 
+    // Stile CSS inline applicato al pulsante per l'effetto "scappa via".
     private string _buttonStyle = "";
+
+    // Contatore hover; dopo 3 tentativi il pulsante smette di scappare.
     private int _attempts = 0;
 
-    [Inject] NavigationManager Navigation { get; set; }
-// Easter egg: il pulsante scappa per i primi 3 hover, poi si ferma.
+    [Inject] NavigationManager Navigation { get; set; } = null!;
+
+    //
+    // Easter egg: per i primi 3 hover il pulsante si sposta in una
+    // posizione random (translate X/Y). Al 4° hover torna in posizione
+    // originale e rimane fermo.
+    //
     private void MoveButton()
     {
         if (_attempts < 3)
@@ -68,5 +86,6 @@
         }
     }
 
+    // Naviga alla home (radice "/") al click.
     private void GoHome() => Navigation.NavigateTo("/");
 }

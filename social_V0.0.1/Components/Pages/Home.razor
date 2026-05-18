@@ -1,3 +1,18 @@
+@* ────────────────────────────────────────────────────────────────────────
+   Home.razor — Pagina principale del feed (route "/home").
+   Struttura a due colonne (RadzenRow/RadzenColumn):
+     - Sinistra (3/12): Card profilo, Compleanni, Avvisi
+     - Destra (9/12):  Box creazione post + feed cronologico
+   Implementa IDisposable per fermare l'auto-refresh loop quando
+   l'utente lascia la pagina.
+   Ciclo di vita:
+     OnInitializedAsync → verifica sessione, carica dati, avvia loop 500ms
+     Dispose → ferma il loop tramite CancellationToken
+   Il loop ogni 500ms (AutoRefreshLoop) ricarica post/avvisi/compleanni
+   dal DB per mantenere il feed aggiornato in tempo reale.
+   La cache distribuita (Memurai) evita che il DB venga saturato.
+   ──────────────────────────────────────────────────────────────────────── *@
+
 @page "/home"
 @implements IDisposable
 @using social_V0._0._1.Utils
@@ -14,6 +29,7 @@
     <div class="center-content">
         <div style="width: 100%; max-width: 1600px; padding: 0 24px;">
 
+            @* Alert di errore globale (problemi di connessione, DB down, ecc.) *@
             @if (!string.IsNullOrEmpty(messaggioErrore))
             {
                 <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
@@ -21,12 +37,19 @@
                 </RadzenAlert>
             }
 
+            @* Griglia principale: Sinistra (colonna) + Destra (feed) *@
             <RadzenRow Gap="2.5rem">
 
-                @* --- COLONNA SINISTRA --- *@
+                @* ────────────────────────────────────────────────────────
+                   COLONNA SINISTRA (3/12 su desktop, 12/12 su mobile)
+                   Contiene: Card profilo, Compleanni, Avvisi
+                   La colonna è sticky (position: sticky, top: 85px)
+                   per rimanere visibile durante lo scroll.
+                   ──────────────────────────────────────────────────────── *@
                 <RadzenColumn Size="12" SizeMD="3">
                     <RadzenStack Gap="1.5rem" Style="position: sticky; top: 85px;">
 
+                        @* Card profilo utente loggato *@
                         @if (utenteLoggato != null)
                         {
                             <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2" Style="text-align: center; border-top: 5px solid var(--brand-primary); background: white;">
@@ -47,8 +70,10 @@
                             </RadzenCard>
                         }
 
+                        @* Card Compleanni: elenco utenti che compiono gli anni oggi *@
                         <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-1" Style="background: white;">
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Class="rz-mb-4">
+                                @* Icona torta *@
                                 <RadzenIcon Icon="cake" IconColor="var(--brand-action)" />
                                 <RadzenText TextStyle="TextStyle.Subtitle1" Style="color: var(--brand-primary); font-weight: bold;" Class="rz-m-0">Compleanni</RadzenText>
                             </RadzenStack>
@@ -56,14 +81,14 @@
                             <RadzenStack Gap="1rem" Class="rz-mt-4">
                                 @if (listaCompleanni == null || !listaCompleanni.Any())
                                 {
-                                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-color-text-secondary">Nessun compleanno oggi ??</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-color-text-secondary">Nessun compleanno oggi 🎉</RadzenText>
                                 }
                                 else
                                 {
                                     @foreach (var festeggiato in listaCompleanni)
                                     {
                                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.8rem">
-                                            <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; @(festeggiato.FotoUrl == null ? "background-color: var(--brand-action); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;" : "")">
+                                            <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; @GetCompleannoStyle(festeggiato.FotoUrl)">
                                                 @if (festeggiato.FotoUrl != null)
                                                 {
                                                     <img src="@ImageHelper.ToBase64(festeggiato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" />
@@ -80,6 +105,7 @@
                             </RadzenStack>
                         </RadzenCard>
 
+                        @* Card Avvisi Aziendali *@
                         <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-1" Style="background-color: #fefefe; border-left: 5px solid #ff9800;">
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Class="rz-mb-4">
                                 <RadzenIcon Icon="campaign" IconColor="#ff9800" />
@@ -102,15 +128,22 @@
                                 }
                             </RadzenStack>
                         </RadzenCard>
+
                     </RadzenStack>
                 </RadzenColumn>
 
+                @* ────────────────────────────────────────────────────────
+                   COLONNA DESTRA (9/12 su desktop)
+                   Contiene: Box creazione post + Feed dei post
+                   ──────────────────────────────────────────────────────── *@
                 <RadzenColumn Size="12" SizeMD="9">
                     <RadzenStack Gap="2rem">
 
+                        @* Box creazione nuovo post *@
                         <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2 rz-p-8" Style="background: white;">
                             <RadzenStack Gap="1.5rem">
                                 <div style="display: flex; gap: 20px; align-items: flex-start;">
+                                    @* Avatar utente a sinistra della textarea *@
                                     @if (utenteLoggato != null)
                                     {
                                         <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid var(--brand-border);">
@@ -126,12 +159,14 @@
                                             }
                                         </div>
                                     }
+                                    @* TextArea multi-riga per il contenuto del post *@
                                     <RadzenTextArea @bind-Value="@nuovoPostContenuto"
                                                     Placeholder="Cosa vuoi condividere con i colleghi?"
                                                     Rows="3"
                                                     Class="rz-w-100"
                                                     Style="border-radius: 12px; border: 1px solid var(--brand-border); padding: 15px; font-size: 1.1rem;" />
                                 </div>
+                                @* Pulsante Pubblica, disabilitato se testo vuoto o utente non loggato *@
                                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
                                     <RadzenButton Click="@PubblicaPost"
                                                   Text="Pubblica"
@@ -143,12 +178,14 @@
                             </RadzenStack>
                         </RadzenCard>
 
+                        @* Feed dei post: ogni post è una RadzenCard separata *@
                         @if (posts != null)
                         {
                             @foreach (var post in posts)
                             {
                                 <RadzenCard Variant="Variant.Filled" Class="rz-border-radius-2 rz-shadow-2 rz-p-8" Style="background: white;">
                                     <RadzenStack Gap="1.5rem">
+                                        @* Intestazione: avatar autore + nome + data *@
                                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.2rem">
                                             <div style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand-border); flex-shrink: 0;">
                                                 @if (post.FotoUrl != null) {
@@ -158,17 +195,23 @@
                                                 }
                                             </div>
                                             <RadzenStack Gap="0">
+                                                @* Nome autore + badge dipartimento *@
                                                 <RadzenText TextStyle="TextStyle.H6" Class="rz-m-0" Style="font-weight: 700; color: var(--brand-primary);">@post.Nome @post.Cognome</RadzenText>
                                                 <RadzenText TextStyle="TextStyle.Body2" Class="rz-m-0 rz-color-text-secondary">
                                                     <span style="color: var(--brand-action); font-weight: 600;">@post.Dipartimento</span>
                                                     <span style="margin: 0 8px;">•</span>
+                                                    @* Conversione da UTC a fuso Italia *@
                                                     <span style="font-size: 0.85rem;">
-                                                        @TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(post.DataPubblicazione, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time")).ToString("dd MMMM yyyy, HH:mm")
+                                                        @TimeZoneInfo.ConvertTimeFromUtc(
+                                                            DateTime.SpecifyKind(post.DataPubblicazione, DateTimeKind.Utc),
+                                                            TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time")
+                                                        ).ToString("dd MMMM yyyy, HH:mm")
                                                     </span>
                                                 </RadzenText>
                                             </RadzenStack>
                                         </RadzenStack>
 
+                                        @* Contenuto del post (testo, con white-space preservato) *@
                                         <div style="padding: 0 5px;">
                                             <RadzenText TextStyle="TextStyle.H6" Style="white-space: pre-wrap; line-height: 1.6; font-weight: 400; color: #2c3e50; font-size: 1.25rem;">
                                                 @post.Contenuto
@@ -177,12 +220,15 @@
 
                                         <RadzenSeparator Style="background-color: var(--brand-border); opacity: 0.3;" />
 
+                                        @* Barra azioni: Like (toggle) e Commenta (placeholder) *@
                                         <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+                                            @* Pulsante Like: cambia icona e colore in base a IsLikedByMe *@
                                             <RadzenButton Variant="Variant.Text"
                                                           Icon="@(post.IsLikedByMe ? "favorite" : "favorite_border")"
                                                           Text="@(post.LikeCount > 0 ? post.LikeCount.ToString() : "")"
                                                           Style="@(post.IsLikedByMe ? "color: #ed4956;" : "color: var(--brand-action);")"
                                                           Click="@(() => GestisciLike(post))" />
+                                            @* Pulsante Commenta (non ancora implementato) *@
                                             <RadzenButton Variant="Variant.Text" Icon="chat_bubble_outline" Text="Commenta" Style="color: var(--brand-action);" />
                                         </RadzenStack>
                                     </RadzenStack>
@@ -191,21 +237,36 @@
                         }
                     </RadzenStack>
                 </RadzenColumn>
+
             </RadzenRow>
         </div>
     </div>
 </div>
 
 @code {
-    private List<PostViewModel> posts;            // Feed completo dei post
-    private List<Avviso> listaAvvisi;              // Avvisi aziendali attivi
-    private List<Utente> listaCompleanni;          // Utenti che compiono gli anni oggi
-    private Utente utenteLoggato;                  // Utente correntemente loggato
+    private List<PostViewModel> posts = null!;     // Feed completo dei post
+    private List<Avviso> listaAvvisi = null!;      // Avvisi aziendali attivi
+    private List<Utente> listaCompleanni = null!;  // Utenti che compiono gli anni oggi
+    private Utente utenteLoggato = null!;          // Utente correntemente loggato
     private string nuovoPostContenuto = "";        // Testo del nuovo post in fase di scrittura
     private string? messaggioErrore;               // Eventuale messaggio di errore visibile in pagina
     private CancellationTokenSource? _cts;         // Token per fermare il loop di auto-refresh
 
-// All'avvio: controlla la sessione, carica feed/avvisi/compleanni, avvia l'auto-refresh ogni 500ms.
+    private string GetCompleannoStyle(byte[]? fotoUrl) =>
+        fotoUrl == null
+            ? "background-color: var(--brand-action); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;"
+            : "";
+
+    //
+    // OnInitializedAsync: step di inizializzazione del componente.
+    // Scelto OnInitializedAsync (non OnInitialized) perché deve eseguire
+    // chiamate asincrone al DB (CaricaDati).
+    // Flusso:
+    // 1. Verifica che l'utente sia loggato; altrimenti redirect a /login
+    // 2. Copia il riferimento dell'utente loggato
+    // 3. Carica post, avvisi e compleanni
+    // 4. Avvia il loop di auto-refresh in un Task fire-and-forget
+    //
     protected override async Task OnInitializedAsync()
     {
         if (Session.UtenteLoggato == null)
@@ -219,7 +280,14 @@
         _ = AutoRefreshLoop(_cts.Token);
     }
 
-// Loop infinito che ricarica i dati ogni 500ms per mantenere il feed aggiornato in tempo reale.
+    //
+    // Loop infinito che ricarica i dati ogni 500ms.
+    // Usa InvokeAsync per eseguire il dispatch sul thread UI di Blazor.
+    // Il CancellationToken permette di fermare il loop quando
+    // l'utente esce dalla pagina (Dispose).
+    // Attenzione: 500ms è aggressivo. La cache Memurai (TTL 5s) evita
+    // che il DB venga saturato: 9 chiamate su 10 colpiscono la cache.
+    //
     private async Task AutoRefreshLoop(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -236,14 +304,23 @@
         }
     }
 
-// Ferma l'auto-refresh quando l'utente esce dalla pagina.
+    //
+    // Dispose: ferma il loop di auto-refresh quando il componente
+    // viene rimosso dal render tree (navigazione ad altra pagina).
+    // Il CancellationTokenSource viene sia cancellato che dispose
+    // per rilasciare le risorse.
+    //
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
     }
 
-// Carica post, avvisi e compleanni dal DB. In caso di errore mostra un alert in pagina.
+    //
+    // Carica post, avvisi e compleanni dal DB (con fallback cache).
+    // In caso di eccezione (es. DB down), mostra messaggio nell'alert
+    // invece di far crashare la pagina.
+    //
     private async Task CaricaDati()
     {
         try
@@ -259,7 +336,13 @@
         }
     }
 
-// Toggle like: aggiorna subito l'interfaccia (ottimismo), poi chiama il DB. Se fallisce, ricarica lo stato reale.
+    //
+    // Toggle like con optimistic update:
+    // 1. Aggiorna SUBITO l'interfaccia (isLiked + conteggio)
+    // 2. Poi chiama il DB per persistenza
+    // 3. Se il DB fallisce, ricarica lo stato reale dal server
+    // (rollback dell'optimistic update)
+    //
     private async Task GestisciLike(PostViewModel post)
     {
         if (utenteLoggato == null) return;
@@ -276,7 +359,11 @@
         }
     }
 
-// Pubblica un nuovo post: lo salva nel DB, ricarica il feed e pulisce il campo di testo.
+    //
+    // Pubblica un nuovo post: lo salva nel DB, ricarica il feed
+    // e pulisce il campo di testo. In caso di errore (DB, validazione),
+    // mostra messaggio nell'alert.
+    //
     private async Task PubblicaPost()
     {
         if (!string.IsNullOrWhiteSpace(nuovoPostContenuto) && utenteLoggato != null)

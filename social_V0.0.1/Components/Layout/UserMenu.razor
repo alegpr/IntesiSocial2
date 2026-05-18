@@ -1,24 +1,37 @@
-ï»¿@using Radzen.Blazor
+@* ------------------------------------------------------------------------
+   UserMenu.razor — Componente per il menu utente nell'header.
+   Mostra dinamicamente:
+     - Pulsante "Accedi" se nessun utente è loggato
+     - Menu a tendina (RadzenProfileMenu) con avatar, iniziali e voci
+       "Il mio profilo", "Impostazioni", "Esci" se loggato
+   Si sottoscrive all'evento Session.OnChange in OnInitialized per
+   reagire immediatamente a login/logout senza attendere un re-render
+   forzato dal genitore.
+   Implementa IDisposable per rimuovere la sottoscrizione ed evitare
+   memory leak quando il componente viene distrutto.
+   ------------------------------------------------------------------------ *@
+@using Radzen.Blazor
 @using social_V0._0._1.Utils
 @implements IDisposable
 @inject ISessionService Session
 @inject NavigationManager NavManager
 
 <style>
+    @* Forza i colori del menu profilo a usare il brand primary *@
     .rz-profile-menu .rz-navigation-item-content .rz-navigation-item-link i,
     .rz-profile-menu .rz-navigation-item-content .rz-navigation-item-link span {
         color: var(--brand-primary) !important;
     }
-
     .rz-navigation-item-link:hover {
         background-color: rgba(0, 0, 0, 0.05) !important;
     }
-
+    @* Utility per forzare testo bianco su sfondo brand *@
     .text-white-force {
         color: white !important;
     }
 </style>
 
+@* Stato non autenticato: mostra pulsante "Accedi" *@
 @if (Session.UtenteLoggato == null)
 {
     <a href="/login"
@@ -27,23 +40,31 @@
         Accedi
     </a>
 }
+@* Stato autenticato: mostra avatar + menu a tendina *@
 else
 {
+    @* RadzenProfileMenu: componente Radzen per menu dropdown con template
+       personalizzato per l'avatar. Il parametro Style e Class gestiscono
+       l'aspetto; il ChildContent definisce le voci del menu. *@
     <RadzenProfileMenu Style="margin: 0; background: transparent; box-shadow: none;" Class="rz-profile-menu">
+        @* Template personalizzato: avatar circolare 40px con foto o iniziali *@
         <Template>
             <div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand-primary); display: flex; align-items: center; justify-content: center; background-color: var(--brand-primary); cursor: pointer;">
                 @if (Session.UtenteLoggato.FotoUrl != null)
                 {
+                    @* Foto profilo come base64 *@
                     <img src="@ImageHelper.ToBase64(Session.UtenteLoggato.FotoUrl)" style="width: 100%; height: 100%; object-fit: cover;" alt="Profilo" />
                 }
                 else
                 {
+                    @* Fallback: iniziali Nome[0]Cognome[0] su sfondo brand *@
                     <span class="text-white-force" style="font-size: 0.9rem; font-weight: bold;">
                         @Session.UtenteLoggato.Nome[0]@Session.UtenteLoggato.Cognome[0]
                     </span>
                 }
             </div>
         </Template>
+        @* Voci del menu dropdown. Path è l'URL di navigazione. *@
         <ChildContent>
             <RadzenProfileMenuItem Text="Il mio profilo" Path="/profilo" Icon="account_circle" />
             <RadzenProfileMenuItem Text="Impostazioni" Path="/impostazioni" Icon="settings" />
@@ -53,14 +74,24 @@ else
 }
 
 @code {
+    //
+    // OnInitialized: si sottoscrive all'evento OnChange di SessionService.
+    // Ogni volta che Session.Login() o Session.Logout() viene chiamato,
+    // StateHasChanged forza il re-render del componente, aggiornando
+    // la visualizzazione (pulsante Accedi ? menu profilo) immediatamente.
+    //
     protected override void OnInitialized()
     {
         Session.OnChange += StateHasChanged;
     }
 
+    //
+    // Dispose: rimuove la sottoscrizione all'evento OnChange.
+    // Fondamentale per evitare che componenti distrutti continuino
+    // a ricevere notifiche (memory leak).
+    //
     public void Dispose()
     {
         Session.OnChange -= StateHasChanged;
     }
 }
-

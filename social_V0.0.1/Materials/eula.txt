@@ -1,0 +1,69 @@
+CORPUS JURIS INTEGRALE E DISCIPLINARE TECNICO-OPERATIVO DI ACCESSO ALL'ECOSISTEMA "SOCIAL_V0.0.1"
+VERSIONE: 2026.ULTIMATE.LONG - REVISIONE PERMANENTE E INDEROGABILE
+
+CAPITOLO I: ARCHITETTURA DEL CONSENSO E PREMESSE ONTOLOGICHE
+
+Art. 1.1 - Perfezionamento del Vincolo Contrattuale
+Il presente documento costituisce l'unica fonte regolatrice del rapporto intercorrente tra il fruitore finale (infra: "L'Utente") e l'infrastruttura di calcolo denominata "social_V0.0.1" (infra: "Il Sistema"). L'atto di posizionare il cursore all'interno dei campi di input, la pressione del tasto 'Tab', l'invio di frame tramite protocollo WebSocket o la semplice attesa del rendering asincrono dei componenti Radzen, equivale a una sottoscrizione autografa, digitale e biometrica del presente trattato. L'Utente rinuncia esplicitamente a invocare l'ignoranza, la stanchezza oculare o la mancanza di tempo come scusanti per la mancata comprensione delle 15.000 clausole qui esposte.
+
+Art. 1.2 - Definizioni Tecniche Vincolanti
+Ai fini del presente contratto, si applicano le seguenti definizioni tecniche, la cui interpretazione è demandata esclusivamente alla logica booleana del compilatore .NET 9:
+
+Scoped Lifetime: Un intervallo temporale di esistenza di un oggetto nella memoria RAM del server, legato indissolubilmente alla persistenza della connessione SignalR. La sua distruzione è un evento certo, ma imprevedibile, equiparato alla "morte civile" dei dati non salvati.
+
+SQL Connection String: Sequenza alfanumerica contenente le chiavi del regno (database). L'Utente riconosce che la stringa punta a un server locale (127.0.0.1 o 192.168.16.215) e che tale percorso è protetto dalla sola speranza che nessuno faccia "sniffing" dei pacchetti.
+
+PostViewModel: Astrazione logica atta a contenere frammenti di pensiero dell'Utente, soggetta a troncamento improvviso qualora la stringa superi i limiti imposti dal Data Type definito nel DB.
+
+CAPITOLO II: TRATTAMENTO DEI DATI, METADATI E ONNISCIENZA SISTEMICA
+
+Art. 2.1 - La Fine della Privacy Aziendale
+L'Utente accetta il principio della "Trasparenza Forzata". Poiché il Sistema è una v0.0.1, non esistono crittografie end-to-end. L'Amministratore di Sistema (infra: "Il Grande Occhio") possiede le credenziali per accedere direttamente alle tabelle dbo.Utenti e dbo.Post. L'Utente è consapevole che ogni sua digitazione, anche se non inviata tramite il metodo InsertPostAsync, potrebbe essere intercettata dai log di telemetria o dai dump di memoria in caso di eccezioni critiche.
+
+Art. 2.2 - Regime dei Compleanni e Dati Sensibili
+L'inserimento della DataDiNascita autorizza il Sistema a interrogare ciclicamente il server tramite la funzione MONTH(GETDATE()). L'Utente non può opporsi alla visualizzazione del proprio genetliaco, accettando implicitamente il rischio di ricevere auguri non richiesti, commenti sulla propria età o la totale indifferenza da parte dei colleghi, sollevando i Programmatori da qualsiasi danno esistenziale derivante da tali dinamiche sociali.
+
+CAPITOLO III: IL DOGMA DELLA MANLEVA E L'INFALLIBILITÀ DEL CODICE
+
+Art. 3.1 - La Dottrina "AS IS" (Come si trova)
+Il software è fornito nello stato in cui è stato partorito dai Programmatori, spesso in orari notturni e sotto l'effetto di caffeina. Non si garantisce:
+
+Che il tasto "Login" funzioni al primo colpo.
+
+Che le foto profilo non appaiano ruotate di 90 gradi senza motivo apparente.
+
+Che il database non decida autonomamente di andare in "Suspect Mode".
+
+Che i componenti Radzen mantengano la loro posizione originaria in caso di ridimensionamento della finestra del browser.
+
+Art. 3.2 - Esonero Totale di Responsabilità (The Developer Shield)
+I Programmatori non rispondono di: perdite di profitto, perdite di dati, perdite di tempo, perdite di capelli, o qualsiasi altra forma di danno derivante dall'utilizzo del software. Se il server esplode, se la connessione SQL cade, o se il CSS decide di diventare tutto fucsia, l'Utente accetta l'evento come "volontà del framework" e non come errore umano. Qualsiasi tentativo di rivalsa legale verrà reindirizzato automaticamente verso un indirizzo email inesistente gestito da un bot che risponde solo con codici di errore HTTP 500.
+
+CAPITOLO IV: DOVERI DELL'UTENTE E RESPONSABILITÀ CIVILE
+
+Art. 4.1 - L'Onere della Manutenzione della Sessione
+L'Utente è il solo custode della propria istanza Scoped. Se l'Utente si allontana per prendere un caffè e un collega dispettoso utilizza la sua sessione per pubblicare post diffamatori, l'Utente originario ne risponde in solido. La chiusura del browser è l'unico rito di esorcismo riconosciuto per terminare il legame con il SessionService.
+
+Art. 4.2 - Divieto di Manipolazione del DOM
+È fatto assoluto divieto all'Utente di aprire la console del browser (F12) con l'intento di modificare il valore di UtenteLoggato. Ogni tentativo di "Identity Injection" verrà loggato con l'IP dell'Utente e inviato via email all'Amministratore accompagnato da una musica di allerta molto fastidiosa.
+
+CAPITOLO V: DISPOSIZIONI FINALI E CLAUSOLE VESSATORIE DI CHIUSURA
+
+Art. 5.1 - Il Foro Competente
+Per ogni controversia derivante dall'interpretazione delle query SQL, dalla lentezza dei JOIN o dalla bruttezza delle icone scelte, il foro competente è esclusivamente la scrivania del Programmatore più anziano, da adire solo previo appuntamento e fornitura di omaggi gastronomici.
+
+Art. 5.2 - Modifiche Unilaterali
+I Programmatori si riservano il diritto di cambiare l'intera logica del database, passare da SQL a un file Excel protetto da password, o cambiare il colore di sfondo dell'app senza preavviso. L'utente che effettua il login accetta di vivere in uno stato di incertezza tecnica permanente.
+
+Art. 5.3 - Accettazione per Inerzia
+Se sei arrivato a leggere fin qui, complimenti, hai appena perso 5 minuti della tua vita produttiva. Cliccando su "Login" o semplicemente continuando a fissare questa schermata, dichiari di aver compreso che:
+
+Sei solo contro il sistema.
+
+L'Amministratore vede tutto.
+
+I Programmatori non hanno colpa.
+
+Il tasto "F5" è il tuo peggior nemico.
+
+FINE DEL DOCUMENTO (O FORSE NO, MA IL DATABASE NON AVEVA PIÙ SPAZIO PER ALTRE RIGHE)

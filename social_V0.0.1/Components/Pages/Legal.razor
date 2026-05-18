@@ -1,3 +1,13 @@
+@* ────────────────────────────────────────────────────────────────────────
+   Legal.razor — Pagina dinamica documenti legali (route "/legal/{Document}").
+   Accetta un parametro "Document" nel path:
+     - "privacy" → carica wwwroot/privacy.txt, titolo "Privacy Policy"
+     - "eula"    → carica wwwroot/eula.txt, titolo "Termini e Condizioni"
+     - altro     → titolo "Documento", contenuto vuoto → "Documento non trovato"
+   Layout:
+     Card centrata (max 900px) con contenuto in &lt;pre&gt;.
+     Pulsante "Indietro" che naviga a /login.
+   ──────────────────────────────────────────────────────────────────────── *@
 @page "/legal/{Document}"
 @using System.IO
 @inject IWebHostEnvironment Env
@@ -12,6 +22,7 @@
             <RadzenCard Variant="Variant.Filled" Class="rz-shadow-10 rz-p-8" Style="background: white;">
                 <RadzenStack Gap="1.5rem">
 
+                    @* Intestazione: titolo + pulsante indietro *@
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" Style="font-weight: 700; color: var(--brand-primary);">@Titolo</RadzenText>
                         <RadzenButton Variant="Variant.Text" Icon="arrow_back" Text="Indietro" Click="@TornaIndietro" Style="color: var(--brand-action);" />
@@ -19,6 +30,7 @@
 
                     <RadzenSeparator Style="background-color: var(--brand-border);" />
 
+                    @* Contenuto documento (letto da file .txt in wwwroot) *@
                     @if (string.IsNullOrEmpty(Contenuto))
                     {
                         <RadzenText TextStyle="TextStyle.Body1" Style="color: #999;">Documento non trovato.</RadzenText>
@@ -36,10 +48,19 @@
 </div>
 
 @code {
+    // Nome documento preso dal route (es. "privacy", "eula").
     [Parameter]
     public string Document { get; set; } = "";
 
+    // Testo completo del documento caricato dal file.
     private string Contenuto = "";
+
+    //
+    // Mappa il parametro Document al titolo human-friendly:
+    // "privacy" → "Privacy Policy"
+    // "eula"    → "Termini e Condizioni"
+    // default   → "Documento"
+    //
     private string Titolo => Document?.ToLower() switch
     {
         "privacy" => "Privacy Policy",
@@ -47,11 +68,18 @@
         _ => "Documento"
     };
 
+    // Carica il file di testo all'inizializzazione del componente.
     protected override async Task OnInitializedAsync()
     {
         await CaricaDocumento();
     }
 
+    //
+    // Determina il nome file in base al parametro Document:
+    // "privacy" → wwwroot/privacy.txt
+    // "eula"    → wwwroot/eula.txt
+    // Se il file esiste, lo legge; altrimenti Contenuto resta vuoto.
+    //
     private async Task CaricaDocumento()
     {
         var nomeFile = Document?.ToLower() switch
@@ -70,5 +98,6 @@
         }
     }
 
+    // Naviga alla pagina di login.
     private void TornaIndietro() => Nav.NavigateTo("/login");
 }

@@ -1,67 +1,113 @@
-ï»¿@inherits LayoutComponentBase
+@* ------------------------------------------------------------------------
+   MainLayout.razor — Layout principale dell'applicazione.
+   Avvolge TUTTE le pagine (Body) con una barra di navigazione superiore
+   fissa (RadzenHeader) contenente logo, barra di ricerca e UserMenu.
+   @rendermode InteractiveServer: necessario perché UserMenu e il
+   ripristino della sessione via cookie richiedono JS interop
+   (disponibile solo quando il circuito SignalR è attivo).
+   Ciclo di vita:
+     OnInitialized ? imposta _needsCookieRestore se sessione assente
+     OnAfterRenderAsync(!firstRender) ? legge cookie userId e ripristina
+       la sessione tramite UtenteSvc.GetUtenteByIdAsync.
+   ------------------------------------------------------------------------ *@
+@inherits LayoutComponentBase
 @using Radzen.Blazor
 @using social_V0._0._1.Utils
-@inject NavigationManager NavManager
 @rendermode InteractiveServer
+@inject NavigationManager NavManager
 @inject ISessionService Session
 @inject IJSRuntime JS
 @inject IUtenteService UtenteSvc
 
-@* Inizializzazione dei servizi JS necessari per i componenti Radzen *@
+@* Inizializzazione JS di Radzen: abilita componenti come tooltip,
+   dialog, context menu (necessita del circuito attivo). *@
 <RadzenComponents @rendermode="InteractiveServer" />
 
 <div class="main-container">
 
-    @* --- BARRA DI NAVIGAZIONE SUPERIORE (FIXED) --- *@
+    @* ----------------------------------------------------------------
+       BARRA DI NAVIGAZIONE SUPERIORE (FIXED)
+       Header fisso in alto (z-index 1000) con effetto backdrop-filter
+       blur per trasparenza. Strutturato in 3 colonne:
+         Sinistra: Logo Intesi (link a /)
+         Centro:   Barra di ricerca globale (placeholder, non funzionale)
+         Destra:   UserMenu (pulsante Accedi o menu profilo)
+       ---------------------------------------------------------------- *@
     <RadzenHeader Style="height: 65px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--brand-primary); position: fixed; top: 0; width: 100%; z-index: 1000;">
 
+        @* Griglia a 3 colonne: logo | ricerca | menu *@
         <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; width: 100%; align-items: center;">
 
-            @* Sezione Sinistra: Branding e Logo *@
+            @* Sezione Sinistra: Logo + Brand *@
             <div style="display: flex; align-items: center;">
                 <a href="/" style="display: flex; align-items: center; text-decoration: none;">
                     <img src="intesi-software-house.png" alt="Intesi Logo" style="height: 35px; width: auto;" />
                 </a>
             </div>
 
-            @* Sezione Centrale: Barra di Ricerca Globale *@
+            @* Sezione Centrale: Barra di Ricerca Globale (placeholder UI) *@
             <div style="display: flex; justify-content: center;">
                 <div style="position: relative; width: 100%; max-width: 400px;">
+                    @* Icona di ricerca posizionata all'interno del TextBox *@
                     <RadzenIcon Icon="search"
                                 Style="position: absolute; left: 15px; top: 10px; color: var(--brand-primary); z-index: 5;" />
-
+                    @* TextBox con padding sinistro per non sovrapporsi all'icona *@
                     <RadzenTextBox Placeholder="Cerca..."
                                    Style="width: 100%; border-radius: 50px; padding-left: 45px; background-color: #f0f2f5; border: 1px solid var(--brand-border); height: 40px;" />
                 </div>
             </div>
 
-            @* Sezione Destra: Azioni Utente *@
+            @* Sezione Destra: Menu Utente (Accedi o profilo con dropdown) *@
             <div style="display: flex; justify-content: flex-end; align-items: center;">
-
                 <UserMenu />
-
             </div>
 
         </div>
     </RadzenHeader>
 
-    @* --- AREA CONTENUTO PRINCIPALE --- *@
+    @* ----------------------------------------------------------------
+       AREA CONTENUTO PRINCIPALE
+       @Body viene sostituito con il contenuto della pagina corrente
+       (es. Home, Profilo, Login) al variare della route.
+       Il padding-top è gestito dal margin della pagina stessa per
+       non far scivolare il contenuto sotto l'header fisso.
+       ---------------------------------------------------------------- *@
     <div class="center-content">
-        @* Il corpo della pagina corrente viene iniettato qui *@
         @Body
     </div>
 
 </div>
 
 @code {
+    //
+    // Flag che indica se è necessario tentare il ripristino della
+    // sessione dal cookie userId. Impostato a true in OnInitialized
+    // quando UtenteLoggato è null.
+    //
     private bool _needsCookieRestore;
 
+    //
+    // OnInitialized: eseguito durante il prerendering lato server.
+    // Non possiamo fare JS interop qui (non ancora disponibile).
+    // Ci limitiamo a verificare se la sessione è vuota e impostiamo
+    // il flag _needsCookieRestore per il prossimo step.
+    //
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato == null)
             _needsCookieRestore = true;
     }
 
+    //
+    // OnAfterRenderAsync: eseguito DOPO che il componente è stato renderizzato.
+    // Il parametro firstRender è true durante il prerendering (JS non disponibile)
+    // e false quando il circuito SignalR è attivo (JS disponibile).
+    // Usiamo !firstRender per eseguire la logica SOLO quando possiamo
+    // chiamare JS.InvokeAsync (cookie get/set).
+    // Se troviamo un cookie "userId" valido, carichiamo l'utente dal DB
+    // e ripristiniamo la sessione con Session.Login().
+    // Se siamo su / o /login dopo il ripristino, navighiamo a /home.
+    //
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender && _needsCookieRestore)
@@ -74,6 +120,7 @@
                 if (utente != null)
                 {
                     Session.Login(utente);
+                    // Se il ripristino avviene mentre si è su login, reindirizza a home
                     var uri = NavManager.Uri;
                     if (uri == "/" || uri == "/login")
                         NavManager.NavigateTo("/home");

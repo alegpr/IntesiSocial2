@@ -1,14 +1,29 @@
 namespace social_V0._0._1.Services
 {
+    //
+    // Servizio Scoped per la gestione degli utenti: login, registrazione,
+    // aggiornamento profilo, cambio password e compleanni.
+    // Utilizza Dapper per query SQL dirette sulla tabella dbo.Utenti
+    // e BCrypt per l'hashing/verifica delle password.
+    // La connection string è letta da appsettings.json tramite IConfiguration.
+    //
     public class UtenteService : IUtenteService
     {
-        private readonly string _connectionString;
+        private readonly string _connectionString = string.Empty;
+
+        //
+        // Costruttore: riceve la configurazione tramite DI e recupera
+        // la stringa di connessione "DefaultConnection".
+        //
         public UtenteService(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
         }
 
-// Usato per debug: recupera solo Nome/Cognome/FotoUrl del primo utente.
+        //
+        // Recupera il primo utente del database ordinato per UtenteId.
+        // Usato solo per debug/demo iniziale del profilo.
+        //
         public async Task<Utente?> GetPrimoUtenteAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -22,14 +37,20 @@ namespace social_V0._0._1.Services
                         return new Utente
                         {
                             UtenteId = (int)reader["UtenteId"],
-                            Nome = reader["Nome"].ToString(),
-                            Cognome = reader["Cognome"].ToString(),
+                            Nome = reader["Nome"]?.ToString() ?? string.Empty,
+                            Cognome = reader["Cognome"]?.ToString() ?? string.Empty,
                             FotoUrl = reader["FotoUrl"] as byte[]
                         };
                 }
             }
             return null;
         }
+
+        //
+        // Recupera un utente completo per ID.
+        // Utilizzato da MainLayout per ripristinare la sessione dal cookie userId
+        // dopo un refresh di pagina o navigazione con forceLoad.
+        //
         public async Task<Utente?> GetUtenteByIdAsync(int utenteId)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -39,7 +60,11 @@ namespace social_V0._0._1.Services
             }
         }
 
-// Se FotoUrl è null, la foto nel DB non viene sovrascritta.
+        //
+        // Aggiorna i dati anagrafici dell'utente.
+        // Se FotoUrl è null, la foto nel DB non viene sovrascritta
+        // (evita di cancellare accidentalmente la foto esistente).
+        //
         public async Task UpdateUtenteAsync(Utente utente)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -59,8 +84,11 @@ namespace social_V0._0._1.Services
             }
         }
 
-/* La nuova_password_hash deve già essere hashata con BCrypt dal chiamante
-   (non viene hashata qui per non doppiare l'hashing). */
+        //
+        // Aggiorna la password dell'utente.
+        // deve già essere hashata con BCrypt
+        // dal chiamante (Profilo.razor) per evitare doppio hashing.
+        //
         public async Task UpdatePasswordAsync(int utenteId, string nuovaPasswordHash)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -70,17 +98,25 @@ namespace social_V0._0._1.Services
             }
         }
 
-// Confronta solo giorno e mese (ignora anno) con GETDATE() di SQL Server.
+        //
+        // Recupera l'elenco degli utenti che compiono gli anni oggi,
+        // confrontando giorno e mese (ignorando l'anno) con GETDATE().
+        // La query usa la vista dbo.VW_CompleanniOggi.
+        //
         public async Task<List<Utente>> GetCompleanniOggiAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                var sql = @"SELECT Nome, Cognome, FotoUrl FROM dbo.Utenti 
-                    WHERE DAY(DataDiNascita) = DAY(GETDATE()) 
-                    AND MONTH(DataDiNascita) = MONTH(GETDATE())";
-                return (await connection.QueryAsync<Utente>(sql)).ToList();
+                return (await connection.QueryAsync<Utente>(
+                    "SELECT * FROM dbo.VW_CompleanniOggi")).ToList();
             }
         }
+
+        //
+        // Tenta l'autenticazione: cerca l'utente per Email, poi verifica
+        // la password con BCrypt.Verify(). Se corrisponde, restituisce l'utente;
+        // altrimenti restituisce null (credenziali errate).
+        //
         public async Task<Utente?> LoginAsync(string email, string password)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -94,6 +130,11 @@ namespace social_V0._0._1.Services
                 return null;
             }
         }
+
+        //
+        // Registra un nuovo utente. La password viene prima hashata con BCrypt,
+        // poi salvata nel database. DataCreazione è impostata a GETDATE() dal server SQL.
+        //
         public async Task RegisterAsync(Utente utente, byte[]? fotoUrl)
         {
             string passwordHash = global::BCrypt.Net.BCrypt.HashPassword(utente.Password);

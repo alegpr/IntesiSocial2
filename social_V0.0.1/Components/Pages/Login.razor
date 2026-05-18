@@ -1,3 +1,14 @@
+@* ────────────────────────────────────────────────────────────────────────
+   Login.razor — Pagina di autenticazione (route "/" e "/login").
+   Mostra un form con email e password. Se l'utente è già loggato
+   (sessione attiva nello stesso circuito), reindirizza subito a /home.
+   Dopo login riuscito:
+     1. Imposta l'utente su SessionService (stato nel circuito)
+     2. Salva un cookie "userId" per ripristinare la sessione
+        in caso di refresh di pagina (letto da MainLayout)
+     3. Naviga a /home (client-side, senza forceLoad, per preservare
+        l'istanza Scoped del SessionService)
+   ──────────────────────────────────────────────────────────────────────── *@
 @page "/"
 @page "/login"
 @inject IUtenteService UtenteSvc
@@ -9,99 +20,75 @@
 <PageTitle>Login</PageTitle>
 
 <style>
-    .login-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 90vh;
-        padding: 20px;
-        background-color: transparent;
-    }
-
-    .login-card {
-        width: 100%;
-        max-width: 800px;
-        border-radius: 16px;
-        background: white;
-        border: none;
-    }
-
-    .link-secondary {
-        font-size: 0.85rem;
-        text-decoration: none;
-        color: var(--brand-primary);
-        font-weight: 600;
-    }
-
-        .link-secondary:hover {
-            text-decoration: underline;
-        }
-
-    .login-footer {
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #eee;
-        text-align: center;
-    }
+    .login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 90vh; padding: 20px; background-color: transparent; }
+    .login-card { width: 100%; max-width: 800px; border-radius: 16px; background: white; border: none; }
+    .link-secondary { font-size: 0.85rem; text-decoration: none; color: var(--brand-primary); font-weight: 600; }
+    .link-secondary:hover { text-decoration: underline; }
+    .login-footer { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #eee; text-align: center; }
 </style>
 
 <div class="login-wrapper">
     <div style="width: 800px; max-width: 100%;">
-    <RadzenCard class="rz-shadow-10 rz-p-8 rz-p-md-12 login-card" Style="height: 600px">
+        @* RadzenCard: contenitore con ombra (shadow 10) e padding responsive *@
+        <RadzenCard class="rz-shadow-10 rz-p-8 rz-p-md-12 login-card" Style="height: 600px">
 
-        <RadzenText TextStyle="TextStyle.H4"
-                    Class="rz-text-align-center rz-mb-6"
-                    Style="font-weight: 800; color: var(--brand-primary); letter-spacing: -1px;">
-            Accedi
-        </RadzenText>
+            <RadzenText TextStyle="TextStyle.H4"
+                        Class="rz-text-align-center rz-mb-6"
+                        Style="font-weight: 800; color: var(--brand-primary); letter-spacing: -1px;">
+                Accedi
+            </RadzenText>
 
-        @if (!string.IsNullOrEmpty(messaggio))
-        {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
-                @messaggio
-            </RadzenAlert>
-        }
+            @* Messaggio di errore (credenziali errate, eccezioni) *@
+            @if (!string.IsNullOrEmpty(messaggio))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Danger" Class="rz-mb-4" Variant="Variant.Flat">
+                    @messaggio
+                </RadzenAlert>
+            }
 
-        <div @onkeydown="@HandleKeyDown">
-            @* EMAIL *@
-            <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-mb-1">Email</RadzenText>
-            <RadzenTextBox @bind-Value="@email" Class="w-100 rz-mb-4" placeholder="esempio@dominio.it" Style="height: 45px;" />
+            @* Handler keydown per submit con Enter *@
+            <div @onkeydown="@HandleKeyDown">
 
-            @* PASSWORD *@
-            <div style="display: flex; justify-content: space-between; align-items: flex-end;" class="rz-mb-1">
-                <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-m-0">Password</RadzenText>
-                <a href="/reset-password" class="link-secondary">Password dimenticata?</a>
+                @* Campo Email *@
+                <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-mb-1">Email</RadzenText>
+                <RadzenTextBox @bind-Value="@email" Class="w-100 rz-mb-4" placeholder="esempio@dominio.it" Style="height: 45px;" />
+
+                @* Campo Password con link "Password dimenticata?" *@
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;" class="rz-mb-1">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-m-0">Password</RadzenText>
+                    <a href="/reset-password" class="link-secondary">Password dimenticata?</a>
+                </div>
+                <RadzenPassword @bind-Value="@password" Class="w-100 rz-mb-4" placeholder="••••••••" Style="height: 45px;" />
+
+                @* Pulsante di login: Click triggera EffettuaLogin *@
+                <RadzenButton Text="Accedi"
+                              Click="@EffettuaLogin"
+                              Class="w-100 rz-mt-4"
+                              Style="background-color: var(--brand-primary); border-radius: 8px; font-weight: bold; height: 50px; font-size: 1.1rem;" />
+
+                @* Sezione di registrazione per nuovi utenti *@
+                <div class="rz-text-align-center rz-mt-8">
+                    <RadzenText TextStyle="TextStyle.Body2" Class="rz-mb-2" Style="color: #666;">
+                        Non hai ancora un account?
+                    </RadzenText>
+                    @* Navigazione client-side a /signup *@
+                    <RadzenButton Text="Registrati ora"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Outlined"
+                                  Click="@(() => NavManager.NavigateTo("/signup"))"
+                                  Class="w-100"
+                                  Style="border-color: var(--brand-primary); color: var(--brand-primary); border-radius: 8px; font-weight: 600; height: 45px;" />
+                </div>
             </div>
-            <RadzenPassword @bind-Value="@password" Class="w-100 rz-mb-4" placeholder="••••••••" Style="height: 45px;" />
 
-            @* LOGIN BUTTON *@
-            <RadzenButton Text="Accedi"
-                          Click="@EffettuaLogin"
-                          Class="w-100 rz-mt-4"
-                          Style="background-color: var(--brand-primary); border-radius: 8px; font-weight: bold; height: 50px; font-size: 1.1rem;" />
-
-            @* SIGNUP SECTION *@
-            <div class="rz-text-align-center rz-mt-8">
-                <RadzenText TextStyle="TextStyle.Body2" Class="rz-mb-2" Style="color: #666;">
-                    Non hai ancora un account?
-                </RadzenText>
-                <RadzenButton Text="Registrati ora"
-                              ButtonStyle="ButtonStyle.Light"
-                              Variant="Variant.Outlined"
-                              Click="@(() => NavManager.NavigateTo("/signup"))"
-                              Class="w-100"
-                              Style="border-color: var(--brand-primary); color: var(--brand-primary); border-radius: 8px; font-weight: 600; height: 45px;" />
+            @* Footer con link a Termini di Servizio e Privacy Policy *@
+            <div class="login-footer">
+                <a href="/legal/eula" style="font-size: 0.85rem; color: #999; text-decoration: none;">Termini di Servizio</a>
+                <span style="margin: 0 10px; color: #ccc;">|</span>
+                <a href="/legal/privacy" style="font-size: 0.85rem; color: #999; text-decoration: none;">Privacy Policy</a>
             </div>
-        </div>
 
-        @* FOOTER CON TERMINI E CONDIZIONI *@
-        <div class="login-footer">
-            <a href="/legal/eula" style="font-size: 0.85rem; color: #999; text-decoration: none;">Termini di Servizio</a>
-            <span style="margin: 0 10px; color: #ccc;">|</span>
-            <a href="/legal/privacy" style="font-size: 0.85rem; color: #999; text-decoration: none;">Privacy Policy</a>
-        </div>
-
-    </RadzenCard>
+        </RadzenCard>
     </div>
 </div>
 
@@ -110,19 +97,37 @@
     private string password = "";
     private string messaggio = "";
 
-// Se già loggato, vai direttamente in home.
+    //
+    // OnInitialized: se l'utente è già loggato (sessione attiva nello stesso
+    // circuito), salta il form e va direttamente in home.
+    // Eseguiamo questo controllo in OnInitialized (sincrono) perché non
+    // richiede chiamate asincrone o JS interop.
+    //
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato != null)
             NavManager.NavigateTo("/home");
     }
 
-// Invio nei campi triggera il login (Enter key).
+    //
+    // Handler per eventi tastiera: premi Enter per inviare il login
+    // senza dover cliccare il pulsante.
+    //
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await EffettuaLogin();
     }
 
+    //
+    // Logica di autenticazione:
+    // 1. Validazione lato client (campi non vuoti)
+    // 2. Chiamata asincrona a UtenteSvc.LoginAsync (verifica BCrypt)
+    // 3. Se successo: salva sessione + cookie + naviga a /home
+    // 4. Se fallito: mostra messaggio errore nel form
+    // Il try-catch gestisce eccezioni di rete/DB mostrandole all'utente.
+    // Il cookie è opzionale (try-catch interno) — se fallisce,
+    // il login funziona comunque (perderà il ripristino dopo refresh).
+    //
     private async Task EffettuaLogin()
     {
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
@@ -136,6 +141,7 @@
             if (utente != null)
             {
                 Session.Login(utente);
+                // Cookie per ripristino sessione dopo refresh (non bloccante)
                 try { await JS.InvokeVoidAsync("setCookie", "userId", utente.UtenteId.ToString()); } catch { }
                 NavManager.NavigateTo("/home");
             }

@@ -1,4 +1,12 @@
-﻿<!DOCTYPE html>
+﻿@* ────────────────────────────────────────────────────────────────────────
+   App.razor — Componente radice dell'applicazione Blazor Server.
+   Definisce la struttura HTML della pagina (head/body) e applica
+   il render mode InteractiveServer a tutte le route tramite <Routes>.
+   Contiene anche le funzioni JavaScript globali per la gestione dei cookie
+   (getCookie, setCookie, deleteCookie) usate da MainLayout e Login/Logout
+   per persistere l'userId oltre il refresh di pagina.
+   ──────────────────────────────────────────────────────────────────────── *@
+<!DOCTYPE html>
 <html lang="it">
 
 <head>
@@ -6,36 +14,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
 
+    @* CSS base di Radzen (temi, colori, griglie) *@
     <link rel="stylesheet" href="_content/Radzen.Blazor/css/standard-base.css">
 
+    @* Icone Material Design di Google (usate da Radzen per icone built-in) *@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
-
     <link rel="stylesheet" href="@Assets["app.css"]" />
-
     <link rel="stylesheet" href="@Assets["social_V0.0.1.styles.css"]" />
 
+    @* Import map per gli asset Blazor, eseguito server-side *@
     <ImportMap />
     <link rel="icon" type="image/x-icon" href="@Assets["favicon.ico"]" />
+
+    @* HeadOutlet: renderizza i tag <title>, <meta>, <link> dichiarati
+       nelle pagine con <PageTitle> e <HeadContent> *@
     <HeadOutlet />
 </head>
 
 <body>
+    @* Routes: il componente che risolve l'URL e renderizza la pagina corrispondente.
+       @rendermode InteractiveServer → tutte le pagine usano rendering server-side
+       interattivo tramite connessione SignalR persistente. *@
     <Routes @rendermode="InteractiveServer" />
 
+    @* Script Blazor: avvia la connessione SignalR e gestisce il rendering interattivo *@
     <script src="_framework/blazor.web.js"></script>
 
+    @* Script Radzen: inizializza i componenti JS di Radzen (tooltip, dialog, menu, ecc.) *@
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
 
+    @* ────────────────────────────────────────────────────────────────────
+       Funzioni JS per la gestione dei cookie lato browser.
+       Utilizzate da:
+         - Login.razor (setCookie dopo login riuscito)
+         - Logout.razor (deleteCookie dopo logout)
+         - MainLayout.razor (getCookie per ripristino sessione dopo refresh)
+       Nota: le chiamate JS sono fatte tramite IJSRuntime.InvokeAsync,
+       disponibile solo quando il circuito SignalR è attivo (OnAfterRenderAsync
+       con firstRender = false). Durante il prerendering NON sono disponibili.
+       ──────────────────────────────────────────────────────────────────── *@
     <script>
+        // Legge un cookie per nome. Restituisce il valore o null.
         window.getCookie = function (name) {
             const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
             return match ? match[2] : null;
         };
+        // Imposta un cookie con scadenza 24h (max-age = 86400 secondi).
         window.setCookie = function (name, value) {
             document.cookie = name + '=' + value + '; path=/; max-age=86400';
         };
+        // Elimina un cookie impostando max-age = 0.
         window.deleteCookie = function (name) {
             document.cookie = name + '=; path=/; max-age=0';
         };

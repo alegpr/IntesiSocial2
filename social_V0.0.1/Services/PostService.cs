@@ -1,52 +1,63 @@
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
-using Microsoft.Data.SqlClient; // Assicurati di avere questo
-using Dapper;                 // E questo
-using social_V0._0._1.Models;  // Cambia in base al tuo namespace reale
 
 namespace social_V0._0._1.Services
 {
+    //
+    // Servizio Scoped per la gestione dei post e dei like.
+    // Utilizza un pattern Cache-Aside con Memurai (Redis compatibile)
+    // per ridurre le query sul database nel feed globale (polling ogni 500ms).
+    // Le viste SQL dbo.VW_PostFeed e dbo.VW_UtenteLikes centralizzano
+    // la logica di join tra le tabelle Post, Utenti e PostLikes.
+    //
     public class PostService : IPostService
     {
-        private readonly string _connectionString;
+        private readonly string _connectionString = string.Empty;
         private readonly IDistributedCache _cache;
 
-        // Chiavi per Redis
+        // Chiave Redis per la cache globale del feed post (TTL 5s).
         private const string GlobalFeedKey = "feed_globale_posts";
+
+        // Chiave Redis per i like di un utente (%userId%). Templated, TTL 10s.
         private string UserLikesKey(int userId) => $"user_likes_{userId}";
 
+        //
+        // Costruttore: riceve configuration (per la connection string) e
+        // IDistributedCache (Memurai/Redis). Il cache è registrato in Program.cs
+        // con AddStackExchangeRedisCache().
+        //
         public PostService(IConfiguration configuration, IDistributedCache cache)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
             _cache = cache;
         }
 
+        //
+        // Recupera tutti i post per il feed globale della home page.
+        // Strategy Cache-Aside:
+        // 1. Tenta il read from Memurai (chiave "feed_globale_posts").
+        // 2. Se cache hit → deserializza e procede.
+        // 3. Se cache miss → query DB tramite VW_PostFeed, salva in cache (TTL 5s).
+        // 4. Recupera i like dell'utente dalla cache utente-specifica o DB.
+        // 5. Imposta IsLikedByMe su ogni post in base ai like recuperati.
+        // Il TTL di 5s garantisce che il polling ogni 500ms non saturi il DB.
+        //
         public async Task<List<PostViewModel>> GetAllPostsAsync(int mioUtenteId)
         {
-            // 1. Tenta di recuperare i post dalla cache globale
             List<PostViewModel> posts;
             var cachedPosts = await _cache.GetStringAsync(GlobalFeedKey);
 
             if (!string.IsNullOrEmpty(cachedPosts))
             {
-                posts = JsonSerializer.Deserialize<List<PostViewModel>>(cachedPosts);
+                posts = JsonSerializer.Deserialize<List<PostViewModel>>(cachedPosts) ?? new List<PostViewModel>();
             }
             else
             {
-                // 2. Cache Miss: Query al DB (senza IsLikedByMe perché è globale)
                 using (var db = new SqlConnection(_connectionString))
                 {
-                    string sql = @"
-                        SELECT P.PostId, P.Contenuto, P.DataPubblicazione,
-                               U.Nome, U.Cognome, U.Dipartimento, U.FotoUrl,
-                               (SELECT COUNT(*) FROM dbo.PostLikes WHERE PostId = P.PostId) AS LikeCount
-                        FROM dbo.Post P
-                        INNER JOIN dbo.Utenti U ON P.UtenteId = U.UtenteId
-                        ORDER BY P.DataPubblicazione DESC";
+                    posts = (await db.QueryAsync<PostViewModel>(
+                        "SELECT * FROM dbo.VW_PostFeed ORDER BY DataPubblicazione DESC")).ToList();
 
-                    posts = (await db.QueryAsync<PostViewModel>(sql)).ToList();
-
-                    // 3. Salva in Memurai per 5 secondi (abbastanza per il tuo loop da 500ms)
                     var cacheOptions = new DistributedCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5)
@@ -55,8 +66,6 @@ namespace social_V0._0._1.Services
                 }
             }
 
-            // 4. Gestione dinamica dei Like per l'utente loggato
-            // Recuperiamo quali post hanno il like dell'utente da una cache specifica o DB
             var likedPostIds = await GetUserLikedElementIdsAsync(mioUtenteId);
 
             foreach (var post in posts)
@@ -67,6 +76,11 @@ namespace social_V0._0._1.Services
             return posts;
         }
 
+        //
+        // Recupera l'insieme degli ID dei post a cui l'utente ha messo like.
+        // Anche questo metodo usa la cache (chiave "user_likes_{userId}", TTL 10s).
+        // La cache viene invalidata da  dopo ogni operazione.
+        //
         private async Task<HashSet<int>> GetUserLikedElementIdsAsync(int utenteId)
         {
             string key = UserLikesKey(utenteId);
@@ -74,13 +88,13 @@ namespace social_V0._0._1.Services
 
             if (!string.IsNullOrEmpty(cached))
             {
-                return JsonSerializer.Deserialize<HashSet<int>>(cached);
+                return JsonSerializer.Deserialize<HashSet<int>>(cached) ?? new HashSet<int>();
             }
 
             using (var db = new SqlConnection(_connectionString))
             {
                 var ids = (await db.QueryAsync<int>(
-                    "SELECT PostId FROM dbo.PostLikes WHERE UtenteId = @UtenteId",
+                    "SELECT PostId FROM dbo.VW_UtenteLikes WHERE UtenteId = @UtenteId",
                     new { UtenteId = utenteId })).ToHashSet();
 
                 await _cache.SetStringAsync(key, JsonSerializer.Serialize(ids),
@@ -90,6 +104,11 @@ namespace social_V0._0._1.Services
             }
         }
 
+        //
+        // Toggle del like: se esiste lo elimina (unlike), altrimenti lo inserisce (like).
+        // Entrambe le cache (feed globale e like utente) vengono invalidate dopo l'operazione
+        // per garantire consistenza al prossimo refresh.
+        //
         public async Task ToggleLikeAsync(int postId, int utenteId)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -106,11 +125,14 @@ namespace social_V0._0._1.Services
                         new { PostId = postId, UtenteId = utenteId });
             }
 
-            // Invalida le cache interessate
             await _cache.RemoveAsync(GlobalFeedKey);
             await _cache.RemoveAsync(UserLikesKey(utenteId));
         }
 
+        //
+        // Inserisce un nuovo post nel database con la data corrente (GETDATE()).
+        // Invalida la cache globale dei post per forzare il refresh del feed.
+        //
         public async Task InsertPostAsync(int utenteId, string contenuto)
         {
             if (string.IsNullOrWhiteSpace(contenuto)) return;
@@ -121,28 +143,27 @@ namespace social_V0._0._1.Services
                 await connection.ExecuteAsync(sql, new { uId = utenteId, cont = contenuto });
             }
 
-            // Nuovo post? Tabula rasa della cache dei post
             await _cache.RemoveAsync(GlobalFeedKey);
         }
 
+        //
+        // Recupera i post di un singolo utente (per la pagina profilo).
+        // Filtro via WHERE UtenteId sulla vista VW_PostFeed.
+        // I like sono calcolati allo stesso modo di GetAllPostsAsync per coerenza.
+        //
         public async Task<List<PostViewModel>> GetPostsByUtenteAsync(int utenteId)
         {
-            // Per i profili singoli possiamo saltare la cache o usarne una specifica se necessario
             using (var db = new SqlConnection(_connectionString))
             {
-                string sql = @"
-                    SELECT P.PostId, P.Contenuto, P.DataPubblicazione,
-                           U.Nome, U.Cognome, U.Dipartimento, U.FotoUrl,
-                           (SELECT COUNT(*) FROM dbo.PostLikes WHERE PostId = P.PostId) AS LikeCount,
-                           CAST(CASE WHEN EXISTS (
-                               SELECT 1 FROM dbo.PostLikes WHERE PostId = P.PostId AND UtenteId = @UtenteId
-                           ) THEN 1 ELSE 0 END AS BIT) AS IsLikedByMe
-                    FROM dbo.Post P
-                    INNER JOIN dbo.Utenti U ON P.UtenteId = U.UtenteId
-                    WHERE P.UtenteId = @UtenteId
-                    ORDER BY P.DataPubblicazione DESC";
+                var posts = (await db.QueryAsync<PostViewModel>(
+                    "SELECT * FROM dbo.VW_PostFeed WHERE UtenteId = @UtenteId ORDER BY DataPubblicazione DESC",
+                    new { UtenteId = utenteId })).ToList();
 
-                return (await db.QueryAsync<PostViewModel>(sql, new { UtenteId = utenteId })).ToList();
+                var likedPostIds = await GetUserLikedElementIdsAsync(utenteId);
+                foreach (var post in posts)
+                    post.IsLikedByMe = likedPostIds.Contains(post.PostId);
+
+                return posts;
             }
         }
     }

@@ -1,3 +1,12 @@
+@* ────────────────────────────────────────────────────────────────────────
+   Logout.razor — Pagina di logout (route "/logout").
+   Non ha interfaccia grafica visibile: appena caricata esegue:
+     1. Session.Logout() — resetta lo stato della sessione nel circuito
+     2. deleteCookie("userId") — rimuove il cookie di persistenza
+     3. Naviga a /login per riportare l'utente al form di accesso
+   La navigazione è senza forceLoad perché vogliamo mantenere lo stesso
+   circuito SignalR (la sessione resettata rimane valida nel nuovo contesto).
+   ──────────────────────────────────────────────────────────────────────── *@
 @page "/logout"
 @inject ISessionService Session
 @inject NavigationManager NavManager
@@ -5,6 +14,13 @@
 @rendermode InteractiveServer
 
 @code {
+    //
+    // OnInitializedAsync: eseguito appena il componente viene inizializzato.
+    // Non c'è UI da mostrare — la pagina serve solo come trigger per
+    // la sequenza di logout + redirect.
+    // L'eventuale try-catch non è necessario: se deleteCookie fallisce,
+    // il logout è comunque effettuato (il cookie scadrà da solo).
+    //
     protected override async Task OnInitializedAsync()
     {
         Session.Logout();

@@ -1,4 +1,5 @@
 using social_V0._0._1.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,13 @@ builder.Services.AddScoped<IAvvisoService, AvvisoService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
+
+// Memurai (Redis compatibile) per caching e sessioni
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = "localhost:6379";
+    options.InstanceName = "SocialApp_";
+});
 
 var app = builder.Build();
 

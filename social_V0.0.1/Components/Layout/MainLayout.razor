@@ -2,13 +2,6 @@
    MainLayout.razor — Layout principale dell'applicazione.
    Avvolge TUTTE le pagine (Body) con una barra di navigazione superiore
    fissa (RadzenHeader) contenente logo, barra di ricerca e UserMenu.
-   @rendermode InteractiveServer: necessario perché UserMenu e il
-   ripristino della sessione via cookie richiedono JS interop
-   (disponibile solo quando il circuito SignalR è attivo).
-   Ciclo di vita:
-     OnInitialized ? imposta _needsCookieRestore se sessione assente
-     OnAfterRenderAsync(!firstRender) ? legge cookie userId e ripristina
-       la sessione tramite UtenteSvc.GetUtenteByIdAsync.
    ------------------------------------------------------------------------ *@
 @inherits LayoutComponentBase
 @using Radzen.Blazor
@@ -58,7 +51,16 @@
             </div>
 
             @* Sezione Destra: Menu Utente (Accedi o profilo con dropdown) *@
-            <div style="display: flex; justify-content: flex-end; align-items: center;">
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px;">
+                
+                @* ICONA ADMIN: Appare solo se l'utente loggato è Admin *@
+                @if (Session.UtenteLoggato?.IsAdmin == true)
+                {
+                    <RadzenIcon Icon="admin_panel_settings" 
+                                Style="color: var(--brand-primary); cursor: pointer; font-size: 28px;" 
+                                @onclick="@(() => NavManager.NavigateTo("/admin"))" />
+                }
+
                 <UserMenu />
             </div>
 
@@ -68,46 +70,21 @@
     @* ----------------------------------------------------------------
        AREA CONTENUTO PRINCIPALE
        @Body viene sostituito con il contenuto della pagina corrente
-       (es. Home, Profilo, Login) al variare della route.
-       Il padding-top è gestito dal margin della pagina stessa per
-       non far scivolare il contenuto sotto l'header fisso.
        ---------------------------------------------------------------- *@
     <div class="center-content">
         @Body
     </div>
-
 </div>
 
 @code {
-    //
-    // Flag che indica se è necessario tentare il ripristino della
-    // sessione dal cookie userId. Impostato a true in OnInitialized
-    // quando UtenteLoggato è null.
-    //
     private bool _needsCookieRestore;
 
-    //
-    // OnInitialized: eseguito durante il prerendering lato server.
-    // Non possiamo fare JS interop qui (non ancora disponibile).
-    // Ci limitiamo a verificare se la sessione è vuota e impostiamo
-    // il flag _needsCookieRestore per il prossimo step.
-    //
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato == null)
             _needsCookieRestore = true;
     }
 
-    //
-    // OnAfterRenderAsync: eseguito DOPO che il componente è stato renderizzato.
-    // Il parametro firstRender è true durante il prerendering (JS non disponibile)
-    // e false quando il circuito SignalR è attivo (JS disponibile).
-    // Usiamo !firstRender per eseguire la logica SOLO quando possiamo
-    // chiamare JS.InvokeAsync (cookie get/set).
-    // Se troviamo un cookie "userId" valido, carichiamo l'utente dal DB
-    // e ripristiniamo la sessione con Session.Login().
-    // Se siamo su / o /login dopo il ripristino, navighiamo a /home.
-    //
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender && _needsCookieRestore)
@@ -120,9 +97,8 @@
                 if (utente != null)
                 {
                     Session.Login(utente);
-                    // Se il ripristino avviene mentre si è su login, reindirizza a home
                     var uri = NavManager.Uri;
-                    if (uri == "/" || uri == "/login")
+                    if (uri == "/" || uri == "/login" || uri.EndsWith("/login") || uri.EndsWith("/"))
                         NavManager.NavigateTo("/home");
                     else
                         StateHasChanged();

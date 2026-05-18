@@ -1,0 +1,169 @@
+﻿@page "/admin"
+@using social_V0._0._1.Models
+@using social_V0._0._1.Services
+@inject IUtenteService UtenteSvc
+@inject ISessionService Session
+@inject NavigationManager NavManager
+@rendermode InteractiveServer
+
+<PageTitle>Pannello Amministratore - Intesi Social</PageTitle>
+
+<style>
+    .admin-card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    .kpi-value { font-size: 2.2rem; font-weight: 800; margin: 10px 0; }
+    .kpi-label { color: #65676b; font-weight: 500; }
+    .section-title { font-weight: 700; color: #1c1e21; margin-bottom: 1.5rem; }
+</style>
+
+<RadzenStack class="rz-p-4 rz-p-md-8" Gap="2rem" Style="background-color: #f0f2f5; min-height: 100vh;">
+    
+    @* HEADER *@
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="rz-display-flex rz-align-items-center">
+            <RadzenIcon Icon="security" Style="font-size: 3rem; color: #4e38f3; margin-right: 1rem;" />
+            <div>
+                <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1" class="rz-mb-0" Style="font-weight: 800;">
+                    Pannello Amministratore
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Subtitle2" Text="Gestione completa della piattaforma Intesi Social" />
+            </div>
+        </RadzenColumn>
+    </RadzenRow>
+
+    @* KPI CARDS *@
+    <RadzenRow>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenCard class="admin-card-stat">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenIcon Icon="group" IconColor="@(Colors.Primary)" />
+                    <RadzenIcon Icon="trending_up" IconColor="@(Colors.Success)" Style="font-size: 1.2rem;" />
+                </RadzenStack>
+                <RadzenText TextStyle="TextStyle.Caption" class="kpi-label" Text="Totale Utenti" />
+                <RadzenText TextStyle="TextStyle.H3" class="kpi-value">156</RadzenText>
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenCard class="admin-card-stat">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenIcon Icon="description" IconColor="@(Colors.Success)" />
+                    <RadzenIcon Icon="trending_up" IconColor="@(Colors.Success)" Style="font-size: 1.2rem;" />
+                </RadzenStack>
+                <RadzenText TextStyle="TextStyle.Caption" class="kpi-label" Text="Post Oggi" />
+                <RadzenText TextStyle="TextStyle.H3" class="kpi-value">24</RadzenText>
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenCard class="admin-card-stat">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenIcon Icon="event" IconColor="@(Colors.Secondary)" />
+                </RadzenStack>
+                <RadzenText TextStyle="TextStyle.Caption" class="kpi-label" Text="Eventi Attivi" />
+                <RadzenText TextStyle="TextStyle.H3" class="kpi-value">3</RadzenText>
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenCard class="admin-card-stat">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenIcon Icon="report_problem" IconColor="@(Colors.Warning)" />
+                </RadzenStack>
+                <RadzenText TextStyle="TextStyle.Caption" class="kpi-label" Text="Avvisi Attivi" />
+                <RadzenText TextStyle="TextStyle.H3" class="kpi-value">5</RadzenText>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    @* MAIN CONTENT BEYOND KPIs *@
+    <RadzenRow>
+        @* SINISTRA: DISTRIBUZIONE DIPARTIMENTI (Sostituisce il grafico utenti) *@
+        <RadzenColumn Size="12" SizeMD="7">
+            <RadzenCard class="admin-card-stat" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H6" class="section-title">Distribuzione Dipartimenti</RadzenText>
+                
+                <RadzenDataGrid Data="@deptStats" TItem="KeyValuePair<string, int>" GridLines="DataGridGridLines.None">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Key" Title="Dipartimento">
+                            <Template Context="data">
+                                <RadzenBadge Text="@data.Key" IsPill="true" BadgeStyle="BadgeStyle.Light" Style="font-size: 0.9rem; padding: 8px 12px;" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Value" Title="Dipendenti" TextAlign="TextAlign.Center">
+                            <Template Context="data">
+                                <b style="font-size: 1.1rem;">@data.Value</b>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Title="Copertura" Sortable="false">
+                            <Template Context="data">
+                                <RadzenProgressBar Value="@((data.Value * 100) / 156)" ShowValue="false" ProgressBarStyle="ProgressBarStyle.Primary" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenCard>
+        </RadzenColumn>
+
+        @* DESTRA: ULTIMI POST *@
+        <RadzenColumn Size="12" SizeMD="5">
+            <RadzenCard class="admin-card-stat" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H6" class="section-title">Ultimi 5 Post Pubblicati</RadzenText>
+                
+                <RadzenStack Gap="1rem">
+                    @foreach (var post in recentPosts)
+                    {
+                        <div style="padding-bottom: 1rem; border-bottom: 1px solid #f0f2f5;">
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                                <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 700; margin:0;">@post.Autore</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Caption">@post.Tempo</RadzenText>
+                            </RadzenStack>
+                            <RadzenText TextStyle="TextStyle.Body2" Style="color: #65676b; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">
+                                @post.Testo
+                            </RadzenText>
+                        </div>
+                    }
+                </RadzenStack>
+                
+                <RadzenButton Variant="Variant.Text" Text="Vedi tutti i post" Style="width: 100%; margin-top: 1rem; color: #4e38f3;" />
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+</RadzenStack>
+
+@code {
+    // Dati fittizi per il mockup basati sull'interfaccia
+    private List<KeyValuePair<string, int>> deptStats = new();
+    private List<RecentPostMock> recentPosts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Controllo Sicurezza
+        if (Session.UtenteLoggato == null || !Session.UtenteLoggato.IsAdmin)
+        {
+            NavManager.NavigateTo("/home");
+            return;
+        }
+
+        // Popolamento Mockup
+        deptStats = new List<KeyValuePair<string, int>> {
+            new ("Sviluppo Software", 45),
+            new ("Risorse Umane", 12),
+            new ("Marketing", 28),
+            new ("Vendite", 35),
+            new ("Amministrazione", 36)
+        };
+
+        recentPosts = new List<RecentPostMock> {
+            new ("Mario Rossi", "Meno di un'ora fa", "Ottimo lavoro sul progetto di questa settimana!"),
+            new ("Laura Bianchi", "1 ora fa", "Felice di annunciare il lancio della nuova campagna..."),
+            new ("Giovanni Verdi", "2 ore fa", "Il nuovo sistema di deploy automatico è finalmente..."),
+            new ("Sofia Russo", "3 ore fa", "Reminder: domani alle 15:00 workshop sul team building"),
+            new ("Alessandro Neri", "4 ore fa", "Qualcuno ha visto le nuove linee guida per il design?")
+        };
+    }
+
+    public class RecentPostMock {
+        public string Autore { get; set; }
+        public string Tempo { get; set; }
+        public string Testo { get; set; }
+        public RecentPostMock(string a, string t, string txt) { Autore = a; Tempo = t; Testo = txt; }
+    }
+}

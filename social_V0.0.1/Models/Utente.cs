@@ -65,5 +65,6 @@ namespace social_V0._0._1.Models
         // per la visualizzazione nei tag &lt;img&gt;.
         //
         public byte[]? FotoUrl { get; set; }
+        public bool IsAdmin { get; set; }
     }
 }

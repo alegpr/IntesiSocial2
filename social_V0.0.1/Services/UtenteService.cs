@@ -1,35 +1,36 @@
+using Microsoft.Data.SqlClient;
+using Dapper;
+using social_V0._0._1.Models;
+using social_V0._0._1.Abstractions; // Namespace dell'interfaccia
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Data;
+using System;
+using System.Linq;
+
 namespace social_V0._0._1.Services
 {
     //
-    // Servizio Scoped per la gestione degli utenti: login, registrazione,
-    // aggiornamento profilo, cambio password e compleanni.
-    // Utilizza Dapper per query SQL dirette sulla tabella dbo.Utenti
-    // e BCrypt per l'hashing/verifica delle password.
-    // La connection string è letta da appsettings.json tramite IConfiguration.
+    // Implementazione del servizio di gestione utenti.
+    // Utilizza Dapper per query SQL dirette e BCrypt per la sicurezza delle password.
     //
     public class UtenteService : IUtenteService
     {
-        private readonly string _connectionString = string.Empty;
+        private readonly string _connectionString;
 
-        //
-        // Costruttore: riceve la configurazione tramite DI e recupera
-        // la stringa di connessione "DefaultConnection".
-        //
         public UtenteService(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
         }
 
-        //
-        // Recupera il primo utente del database ordinato per UtenteId.
-        // Usato solo per debug/demo iniziale del profilo.
-        //
+        // Recupera il primo utente del database (usato per debug/demo).
         public async Task<Utente?> GetPrimoUtenteAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                var sql = "SELECT TOP 1 UtenteId, Nome, Cognome, FotoUrl FROM dbo.Utenti ORDER BY UtenteId ASC";
+                var sql = "SELECT TOP 1 UtenteId, Nome, Cognome, FotoUrl, IsAdmin FROM dbo.Utenti ORDER BY UtenteId ASC";
                 using (var command = new SqlCommand(sql, connection))
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -39,18 +40,15 @@ namespace social_V0._0._1.Services
                             UtenteId = (int)reader["UtenteId"],
                             Nome = reader["Nome"]?.ToString() ?? string.Empty,
                             Cognome = reader["Cognome"]?.ToString() ?? string.Empty,
-                            FotoUrl = reader["FotoUrl"] as byte[]
+                            FotoUrl = reader["FotoUrl"] as byte[],
+                            IsAdmin = reader["IsAdmin"] != DBNull.Value && (bool)reader["IsAdmin"]
                         };
                 }
             }
             return null;
         }
 
-        //
-        // Recupera un utente completo per ID.
-        // Utilizzato da MainLayout per ripristinare la sessione dal cookie userId
-        // dopo un refresh di pagina o navigazione con forceLoad.
-        //
+        // Recupera un utente per ID (usato nel ripristino sessione da cookie).
         public async Task<Utente?> GetUtenteByIdAsync(int utenteId)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -60,11 +58,7 @@ namespace social_V0._0._1.Services
             }
         }
 
-        //
-        // Aggiorna i dati anagrafici dell'utente.
-        // Se FotoUrl è null, la foto nel DB non viene sovrascritta
-        // (evita di cancellare accidentalmente la foto esistente).
-        //
+        // Aggiorna i dati anagrafici di un utente (nome, cognome, dipartimento, data nascita, foto).
         public async Task UpdateUtenteAsync(Utente utente)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -73,22 +67,18 @@ namespace social_V0._0._1.Services
                 {
                     await db.ExecuteAsync(
                         "UPDATE dbo.Utenti SET Nome=@Nome, Cognome=@Cognome, Dipartimento=@Dipartimento, DataDiNascita=@DataDiNascita, FotoUrl=@FotoUrl WHERE UtenteId=@UtenteId",
-                        new { utente.Nome, utente.Cognome, utente.Dipartimento, utente.DataDiNascita, utente.FotoUrl, utente.UtenteId });
+                        new { Nome = utente.Nome, Cognome = utente.Cognome, Dipartimento = utente.Dipartimento, DataDiNascita = utente.DataDiNascita, FotoUrl = utente.FotoUrl, UtenteId = utente.UtenteId });
                 }
                 else
                 {
                     await db.ExecuteAsync(
                         "UPDATE dbo.Utenti SET Nome=@Nome, Cognome=@Cognome, Dipartimento=@Dipartimento, DataDiNascita=@DataDiNascita WHERE UtenteId=@UtenteId",
-                        new { utente.Nome, utente.Cognome, utente.Dipartimento, utente.DataDiNascita, utente.UtenteId });
+                        new { Nome = utente.Nome, Cognome = utente.Cognome, Dipartimento = utente.Dipartimento, DataDiNascita = utente.DataDiNascita, UtenteId = utente.UtenteId });
                 }
             }
         }
 
-        //
-        // Aggiorna la password dell'utente.
-        // deve già essere hashata con BCrypt
-        // dal chiamante (Profilo.razor) per evitare doppio hashing.
-        //
+        // Aggiorna la password hashata di un utente.
         public async Task UpdatePasswordAsync(int utenteId, string nuovaPasswordHash)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -98,25 +88,17 @@ namespace social_V0._0._1.Services
             }
         }
 
-        //
-        // Recupera l'elenco degli utenti che compiono gli anni oggi,
-        // confrontando giorno e mese (ignorando l'anno) con GETDATE().
-        // La query usa la vista dbo.VW_CompleanniOggi.
-        //
+        // Elenco degli utenti che compiono gli anni oggi, per la sezione Compleanni della home.
         public async Task<List<Utente>> GetCompleanniOggiAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                return (await connection.QueryAsync<Utente>(
-                    "SELECT * FROM dbo.VW_CompleanniOggi")).ToList();
+                var result = await connection.QueryAsync<Utente>("SELECT * FROM dbo.VW_CompleanniOggi");
+                return result.ToList();
             }
         }
 
-        //
-        // Tenta l'autenticazione: cerca l'utente per Email, poi verifica
-        // la password con BCrypt.Verify(). Se corrisponde, restituisce l'utente;
-        // altrimenti restituisce null (credenziali errate).
-        //
+        // Tenta l'autenticazione: cerca utente per email e verifica password con BCrypt.
         public async Task<Utente?> LoginAsync(string email, string password)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -131,10 +113,7 @@ namespace social_V0._0._1.Services
             }
         }
 
-        //
-        // Registra un nuovo utente. La password viene prima hashata con BCrypt,
-        // poi salvata nel database. DataCreazione è impostata a GETDATE() dal server SQL.
-        //
+        // Registra un nuovo utente nel database con password hashata.
         public async Task RegisterAsync(Utente utente, byte[]? fotoUrl)
         {
             string passwordHash = global::BCrypt.Net.BCrypt.HashPassword(utente.Password);
@@ -142,13 +121,33 @@ namespace social_V0._0._1.Services
             using (var db = new SqlConnection(_connectionString))
             {
                 await db.ExecuteAsync(@"
-                    INSERT INTO dbo.Utenti (Nome, Cognome, Email, Password, Dipartimento, DataDiNascita, DataCreazione, FotoUrl)
-                    VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, GETDATE(), @FotoUrl)",
+                    INSERT INTO dbo.Utenti (Nome, Cognome, Email, Password, Dipartimento, DataDiNascita, DataCreazione, FotoUrl, IsAdmin)
+                    VALUES (@Nome, @Cognome, @Email, @Password, @Dipartimento, @DataDiNascita, GETDATE(), @FotoUrl, @IsAdmin)",
                     new
                     {
-                        utente.Nome, utente.Cognome, utente.Email, Password = passwordHash,
-                        utente.Dipartimento, utente.DataDiNascita, FotoUrl = fotoUrl
+                        Nome = utente.Nome,
+                        Cognome = utente.Cognome,
+                        Email = utente.Email,
+                        Password = passwordHash,
+                        Dipartimento = utente.Dipartimento,
+                        DataDiNascita = utente.DataDiNascita,
+                        FotoUrl = fotoUrl,
+                        IsAdmin = utente.IsAdmin
                     });
+            }
+        }
+
+        //
+        // Recupera le statistiche dei dipendenti raggruppati per dipartimento.
+        // Usato nella Dashboard Amministratore per visualizzare la distribuzione del personale.
+        //
+        public async Task<Dictionary<string, int>> GetUtentiPerDipartimentoAsync()
+        {
+            using (var db = new SqlConnection(_connectionString))
+            {
+                const string sql = "SELECT ISNULL(Dipartimento, 'Non Specificato') as Dept, COUNT(*) as Conteggio FROM dbo.Utenti GROUP BY Dipartimento";
+                var result = await db.QueryAsync(sql);
+                return result.ToDictionary(x => (string)x.Dept, x => (int)x.Conteggio);
             }
         }
     }

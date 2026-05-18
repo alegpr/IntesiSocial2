@@ -1,16 +1,10 @@
 @* ────────────────────────────────────────────────────────────────────────
    Signup.razor — Pagina di registrazione nuovo account (route "/signup").
-   Layout:
-     Card centrata (max 600px) con RadzenTemplateForm<Utente>.
-   Campi: Nome *, Cognome *, Email *, Password *,
-   Dipartimento, DataNascita, Foto (opzionale, InputFile nativo Blazor).
-   Checkbox "Accetto termini e condizioni" obbligatoria.
-   Se utente già loggato → redirect immediato a /home.
-   Ciclo di vita:
-     OnInitialized → controllo sessione
-     OnSignup() → registrazione + redirect a /login dopo 2s
    ──────────────────────────────────────────────────────────────────────── *@
 @page "/signup"
+@using social_V0._0._1.Models
+@using social_V0._0._1.Abstractions
+@using System.IO
 @inject IUtenteService UtenteSvc
 @inject NavigationManager NavManager
 @inject ISessionService Session
@@ -26,7 +20,7 @@
         Registrazione
     </RadzenText>
 
-    @* Alert di feedback: verde se successo, rosso se errore *@
+    @* Alert di feedback *@
     @if (!string.IsNullOrEmpty(messaggio))
     {
         <RadzenAlert AlertStyle="@(successo ? AlertStyle.Success : AlertStyle.Danger)" Variant="Variant.Flat" Class="rz-mb-4">
@@ -34,11 +28,10 @@
         </RadzenAlert>
     }
 
-    @* TemplateForm con validazione Radzen integrata (RequiredValidator, EmailValidator) *@
     <RadzenTemplateForm TItem="Utente" Data="@nuovoUtente" Submit="@OnSignup">
         <RadzenStack Gap="1.5rem">
 
-            @* Nome e Cognome affiancati in una riga *@
+            @* Nome e Cognome *@
             <RadzenRow>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Nome *" Style="width:100%">
@@ -54,18 +47,20 @@
                 </RadzenColumn>
             </RadzenRow>
 
+            @* Email *@
             <RadzenFormField Text="Email *" Style="width:100%">
                 <RadzenTextBox @bind-Value="@nuovoUtente.Email" Name="Email" Style="width: 100%;" />
                 <RadzenRequiredValidator Component="Email" Text="Email richiesta" />
                 <RadzenEmailValidator Component="Email" Text="Formato non valido" />
             </RadzenFormField>
 
+            @* Password *@
             <RadzenFormField Text="Password *" Style="width:100%">
                 <RadzenPassword @bind-Value="@nuovoUtente.Password" Name="Password" Style="width: 100%;" />
                 <RadzenRequiredValidator Component="Password" Text="Password richiesta" />
             </RadzenFormField>
 
-            @* Dipartimento (opzionale, max 50 char) e data nascita affiancati *@
+            @* Dipartimento e Data Nascita *@
             <RadzenRow>
                 <RadzenColumn Size="6">
                     <RadzenFormField Text="Dipartimento" Style="width:100%">
@@ -79,13 +74,13 @@
                 </RadzenColumn>
             </RadzenRow>
 
-            @* Upload foto opzionale (max 5MB) *@
+            @* Upload foto *@
             <RadzenText TextStyle="TextStyle.Subtitle2" Style="color: #65676b;">Foto Profilo (Opzionale)</RadzenText>
             <div style="border: 1px dashed #ccc; padding: 10px; border-radius: 4px;">
                 <InputFile OnChange="@OnInputFileChange" class="form-control" accept="image/*" />
             </div>
 
-            @* Checkbox EULA: obbligatoria per abilitare il pulsante Registrati *@
+            @* Checkbox EULA *@
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <RadzenCheckBox @bind-Value="@accettaTermini" Name="EULA" TValue="bool" />
                 <RadzenLabel Component="EULA" Style="font-size: 0.9rem;">
@@ -93,11 +88,19 @@
                 </RadzenLabel>
             </RadzenStack>
 
-            @* Submit: disabilitato fino ad accettazione termini *@
+            @* SEZIONE TEST ADMIN *@
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem"
+                         Style="background-color: #fff4e5; padding: 10px; border-radius: 4px; border: 1px solid #ffe2b3;">
+                <RadzenCheckBox @bind-Value="@nuovoUtente.IsAdmin" Name="IsAdmin" TValue="bool" />
+                <RadzenLabel Component="IsAdmin" Style="font-size: 0.9rem; font-weight: bold; color: #856404;">
+                    Registra come Amministratore (Test)
+                </RadzenLabel>
+            </RadzenStack>
+
+            @* Pulsanti *@
             <RadzenButton ButtonType="ButtonType.Submit" Text="REGISTRATI" Disabled="@(!accettaTermini)"
                           Style="width: 100%; background-color: var(--brand-primary); font-weight: bold; height: 48px;" />
 
-            @* Link alternativo al login *@
             <RadzenButton ButtonStyle="ButtonStyle.Light" Text="TORNA AL LOGIN"
                           Click="@(() => NavManager.NavigateTo("/login"))" Style="width: 100%; height: 48px;" />
         </RadzenStack>
@@ -105,49 +108,23 @@
 </RadzenCard>
 
 @code {
-    // Modello dati legato al form di registrazione.
     private Utente nuovoUtente = new Utente();
-
-    // Messaggio di feedback all'utente (successo/errore).
     private string messaggio = "";
-
-    // Flag per stile alert (true=verde successo, false=rosso errore).
     private bool successo = false;
-
-    // Accettazione termini e condizioni (checkbox); blocca submit se false.
     private bool accettaTermini = false;
-
-    // File foto caricato dall'utente; convertito in byte[] al submit.
     private IBrowserFile? fileCaricato;
 
-    //
-    // Se l'utente è già loggato (cookie/sessione attivo), salta la registrazione
-    // e va direttamente alla home.
-    //
     protected override void OnInitialized()
     {
         if (Session.UtenteLoggato != null)
             NavManager.NavigateTo("/home");
     }
 
-    //
-    // Salva il riferimento al file selezionato (InputFile nativo Blazor).
-    // La conversione in byte[] avviene solo al submit per non occupare
-    // memoria inutilmente.
-    //
     private void OnInputFileChange(InputFileChangeEventArgs e)
     {
         fileCaricato = e.File;
     }
 
-    //
-    // Submit del form di registrazione:
-    // 1. Legge il file in byte[] (max 5MB)
-    // 2. Chiama UtenteSvc.RegisterAsync (salva su DB con BCrypt hash)
-    // 3. Mostra alert successo
-    // 4. Dopo 2s redirect a /login
-    // In caso di eccezione (email duplicata, DB down) mostra alert errore.
-    //
     async Task OnSignup()
     {
         if (!accettaTermini) return;
@@ -166,6 +143,7 @@
                 }
             }
 
+            // Chiama il servizio (che ha al suo interno la connection string)
             await UtenteSvc.RegisterAsync(nuovoUtente, fotoUrlFinale);
 
             successo = true;

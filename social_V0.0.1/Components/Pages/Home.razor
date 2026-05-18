@@ -14,7 +14,8 @@
    ──────────────────────────────────────────────────────────────────────── *@
 
 @page "/home"
-@implements IDisposable
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR.Client
 @using social_V0._0._1.Utils
 @inject IPostService PostSvc
 @inject IUtenteService UtenteSvc
@@ -248,9 +249,9 @@
     private List<Avviso> listaAvvisi = null!;      // Avvisi aziendali attivi
     private List<Utente> listaCompleanni = null!;  // Utenti che compiono gli anni oggi
     private Utente utenteLoggato = null!;          // Utente correntemente loggato
+    private HubConnection _hubConnection = null!; // Connessione SignalR per notifiche real-time
     private string nuovoPostContenuto = "";        // Testo del nuovo post in fase di scrittura
     private string? messaggioErrore;               // Eventuale messaggio di errore visibile in pagina
-    private CancellationTokenSource? _cts;         // Token per fermare il loop di auto-refresh
 
     private string GetCompleannoStyle(byte[]? fotoUrl) =>
         fotoUrl == null
@@ -259,13 +260,11 @@
 
     //
     // OnInitializedAsync: step di inizializzazione del componente.
-    // Scelto OnInitializedAsync (non OnInitialized) perché deve eseguire
-    // chiamate asincrone al DB (CaricaDati).
     // Flusso:
     // 1. Verifica che l'utente sia loggato; altrimenti redirect a /login
     // 2. Copia il riferimento dell'utente loggato
-    // 3. Carica post, avvisi e compleanni
-    // 4. Avvia il loop di auto-refresh in un Task fire-and-forget
+    // 3. Carica post, avvisi e compleanni (CaricaDati)
+    // 4. Crea e avvia la connessione SignalR al NotificationHub
     //
     protected override async Task OnInitializedAsync()
     {
@@ -276,44 +275,61 @@
         }
         utenteLoggato = Session.UtenteLoggato;
         await CaricaDati();
-        _cts = new CancellationTokenSource();
-        _ = AutoRefreshLoop(_cts.Token);
+        await AvviaSignalR();
     }
 
     //
-    // Loop infinito che ricarica i dati ogni 500ms.
-    // Usa InvokeAsync per eseguire il dispatch sul thread UI di Blazor.
-    // Il CancellationToken permette di fermare il loop quando
-    // l'utente esce dalla pagina (Dispose).
-    // Attenzione: 500ms è aggressivo. La cache Memurai (TTL 5s) evita
-    // che il DB venga saturato: 9 chiamate su 10 colpiscono la cache.
+    // Crea e avvia la connessione al NotificationHub.
+    // Si sottoscrive agli eventi "NewPost" e "LikeChanged":
+    // alla ricezione di uno dei due, ricarica i dati via CaricaDati().
+    // La connessione viene chiusa in Dispose().
     //
-    private async Task AutoRefreshLoop(CancellationToken ct)
+    private async Task AvviaSignalR()
     {
-        while (!ct.IsCancellationRequested)
+        try
         {
-            await Task.Delay(500, ct);
-            if (!ct.IsCancellationRequested)
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavManager.ToAbsoluteUri("/notificationhub"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("NewPost", async () =>
             {
                 await InvokeAsync(async () =>
                 {
                     await CaricaDati();
                     StateHasChanged();
                 });
-            }
+            });
+
+            _hubConnection.On("LikeChanged", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await CaricaDati();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR connection error: {ex.Message}");
         }
     }
 
     //
-    // Dispose: ferma il loop di auto-refresh quando il componente
-    // viene rimosso dal render tree (navigazione ad altra pagina).
-    // Il CancellationTokenSource viene sia cancellato che dispose
-    // per rilasciare le risorse.
+    // DisposeAsync: ferma e rilascia la connessione SignalR quando il
+    // componente viene rimosso dal render tree (navigazione ad altra
+    // pagina o chiusura del circuito).
     //
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
+        if (_hubConnection != null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
     }
 
     //

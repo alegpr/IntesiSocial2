@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using social_V0._0._1.Hubs;
 using System.Text.Json;
 
 namespace social_V0._0._1.Services
@@ -6,7 +8,11 @@ namespace social_V0._0._1.Services
     //
     // Servizio Scoped per la gestione dei post e dei like.
     // Utilizza un pattern Cache-Aside con Memurai (Redis compatibile)
-    // per ridurre le query sul database nel feed globale (polling ogni 500ms).
+    // per ridurre le query sul database.
+    // Invia notifiche real-time via IHubContext<NotificationHub>:
+    //   - InsertPostAsync → broadcast "NewPost"
+    //   - ToggleLikeAsync → broadcast "LikeChanged"
+    // Home.razor ascolta questi eventi invece di fare polling 500ms.
     // Le viste SQL dbo.VW_PostFeed e dbo.VW_UtenteLikes centralizzano
     // la logica di join tra le tabelle Post, Utenti e PostLikes.
     //
@@ -14,6 +20,7 @@ namespace social_V0._0._1.Services
     {
         private readonly string _connectionString = string.Empty;
         private readonly IDistributedCache _cache;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
         // Chiave Redis per la cache globale del feed post (TTL 5s).
         private const string GlobalFeedKey = "feed_globale_posts";
@@ -22,14 +29,14 @@ namespace social_V0._0._1.Services
         private string UserLikesKey(int userId) => $"user_likes_{userId}";
 
         //
-        // Costruttore: riceve configuration (per la connection string) e
-        // IDistributedCache (Memurai/Redis). Il cache è registrato in Program.cs
-        // con AddStackExchangeRedisCache().
+        // Costruttore: riceve configuration (per la connection string),
+        // IDistributedCache (Memurai/Redis) e IHubContext per notifiche real-time.
         //
-        public PostService(IConfiguration configuration, IDistributedCache cache)
+        public PostService(IConfiguration configuration, IDistributedCache cache, IHubContext<NotificationHub> hubContext)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
             _cache = cache;
+            _hubContext = hubContext;
         }
 
         //
@@ -106,8 +113,8 @@ namespace social_V0._0._1.Services
 
         //
         // Toggle del like: se esiste lo elimina (unlike), altrimenti lo inserisce (like).
-        // Entrambe le cache (feed globale e like utente) vengono invalidate dopo l'operazione
-        // per garantire consistenza al prossimo refresh.
+        // Entrambe le cache (feed globale e like utente) vengono invalidate dopo l'operazione.
+        // Broadcast "LikeChanged" a tutti i client connessi via SignalR.
         //
         public async Task ToggleLikeAsync(int postId, int utenteId)
         {
@@ -127,11 +134,14 @@ namespace social_V0._0._1.Services
 
             await _cache.RemoveAsync(GlobalFeedKey);
             await _cache.RemoveAsync(UserLikesKey(utenteId));
+
+            await _hubContext.Clients.All.SendAsync("LikeChanged");
         }
 
         //
         // Inserisce un nuovo post nel database con la data corrente (GETDATE()).
-        // Invalida la cache globale dei post per forzare il refresh del feed.
+        // Invalida la cache globale dei post.
+        // Broadcast "NewPost" a tutti i client connessi via SignalR.
         //
         public async Task InsertPostAsync(int utenteId, string contenuto)
         {
@@ -144,6 +154,8 @@ namespace social_V0._0._1.Services
             }
 
             await _cache.RemoveAsync(GlobalFeedKey);
+
+            await _hubContext.Clients.All.SendAsync("NewPost");
         }
 
         //

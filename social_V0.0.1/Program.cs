@@ -41,6 +41,10 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "SocialApp_";
 });
 
+// SignalR Hub per notifiche real-time (nuovo post, like).
+// Sostituisce il polling 500ms in Home.razor.
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // ─────────────────────────────────────────────────────────────
@@ -60,5 +64,6 @@ app.UseAntiforgery();               // Protezione CSRF per form Blazor
 app.MapStaticAssets();              // Mapping degli asset statici
 app.MapRazorComponents<App>()       // Root component Blazor
     .AddInteractiveServerRenderMode();
+app.MapHub<social_V0._0._1.Hubs.NotificationHub>("/notificationhub");
 
 app.Run();

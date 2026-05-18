@@ -7,6 +7,7 @@ namespace social_V0._0._1.Services
     {
         public Utente? UtenteLoggato { get; private set; }
         public event Action? OnChange;
+
 // Ora corrente nel fuso italiano (W. Europe Standard Time).
         public DateTime OraAttuale
         {

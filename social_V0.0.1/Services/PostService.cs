@@ -12,8 +12,8 @@ namespace social_V0._0._1.Services
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
-// Toggle: se il like esiste lo elimina, altrimenti lo inserisce.
 
+// Toggle: se il like esiste lo elimina, altrimenti lo inserisce.
         public async Task ToggleLikeAsync(int postId, int utenteId)
         {
             using (var db = new SqlConnection(_connectionString))

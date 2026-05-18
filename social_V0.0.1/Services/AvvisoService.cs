@@ -12,8 +12,8 @@ namespace social_V0._0._1.Services
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
-// Solo avvisi con Attivo = true, ordinati dal più recente.
 
+// Solo avvisi con Attivo = true, ordinati dal più recente.
         public async Task<List<Avviso>> GetAvvisiAttiviAsync()
         {
             using (var connection = new SqlConnection(_connectionString))

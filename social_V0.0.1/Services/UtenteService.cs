@@ -12,8 +12,8 @@ namespace social_V0._0._1.Services
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
-// Usato per debug: recupera solo Nome/Cognome/FotoUrl del primo utente.
 
+// Usato per debug: recupera solo Nome/Cognome/FotoUrl del primo utente.
         public async Task<Utente?> GetPrimoUtenteAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -43,8 +43,8 @@ namespace social_V0._0._1.Services
                 return await db.QueryFirstOrDefaultAsync<Utente>(sql, new { Id = utenteId });
             }
         }
-// Se FotoUrl è null, la foto nel DB non viene sovrascritta.
 
+// Se FotoUrl è null, la foto nel DB non viene sovrascritta.
         public async Task UpdateUtenteAsync(Utente utente)
         {
             using (var db = new SqlConnection(_connectionString))
@@ -63,6 +63,7 @@ namespace social_V0._0._1.Services
                 }
             }
         }
+
 /* La nuova_password_hash deve già essere hashata con BCrypt dal chiamante
    (non viene hashata qui per non doppiare l'hashing). */
         public async Task UpdatePasswordAsync(int utenteId, string nuovaPasswordHash)
@@ -73,8 +74,8 @@ namespace social_V0._0._1.Services
                     new { Password = nuovaPasswordHash, UtenteId = utenteId });
             }
         }
-// Confronta solo giorno e mese (ignora anno) con GETDATE() di SQL Server.
 
+// Confronta solo giorno e mese (ignora anno) con GETDATE() di SQL Server.
         public async Task<List<Utente>> GetCompleanniOggiAsync()
         {
             using (var connection = new SqlConnection(_connectionString))

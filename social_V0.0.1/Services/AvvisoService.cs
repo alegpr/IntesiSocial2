@@ -1,11 +1,6 @@
-using Dapper;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using social_V0._0._1.Models;
-
 namespace social_V0._0._1.Services
 {
-    public class AvvisoService
+    public class AvvisoService : IAvvisoService
     {
         private readonly string _connectionString;
         public AvvisoService(IConfiguration configuration)

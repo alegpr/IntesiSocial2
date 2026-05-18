@@ -1,9 +1,6 @@
-using social_V0._0._1.Models;
-
 namespace social_V0._0._1.Services
 {
-// Servizio Singleton: mantiene l'utente loggato tra le pagine e notifica i componenti via OnChange.
-    public class SessionService
+    public class SessionService : ISessionService
     {
         public Utente? UtenteLoggato { get; private set; }
         public event Action? OnChange;

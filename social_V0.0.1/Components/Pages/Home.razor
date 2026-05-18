@@ -1,14 +1,11 @@
 @page "/home"
 @implements IDisposable
-@using System
-@using social_V0._0._1.Models
-@using social_V0._0._1.Services
 @using social_V0._0._1.Utils
-@inject PostService PostSvc
-@inject UtenteService UtenteSvc
-@inject AvvisoService AvvisoSvc
+@inject IPostService PostSvc
+@inject IUtenteService UtenteSvc
+@inject IAvvisoService AvvisoSvc
 @inject NavigationManager NavManager
-@inject SessionService Session
+@inject ISessionService Session
 @rendermode InteractiveServer
 
 <PageTitle>Home</PageTitle>

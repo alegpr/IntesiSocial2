@@ -1,0 +1,14 @@
+@page "/logout"
+@inject ISessionService Session
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Logout();
+        await JS.InvokeVoidAsync("deleteCookie", "userId");
+        NavManager.NavigateTo("/login");
+    }
+}

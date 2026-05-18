@@ -1,12 +1,9 @@
 @page "/profilo"
-@using System.IO
-@using social_V0._0._1.Models
-@using social_V0._0._1.Services
 @using social_V0._0._1.Utils
-@inject PostService PostSvc
-@inject UtenteService UtenteSvc
+@inject IPostService PostSvc
+@inject IUtenteService UtenteSvc
 @inject NavigationManager NavManager
-@inject SessionService Session
+@inject ISessionService Session
 @rendermode InteractiveServer
 
 <PageTitle>Profilo</PageTitle>

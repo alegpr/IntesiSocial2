@@ -1,16 +1,14 @@
-using Radzen;
 using social_V0._0._1.Components;
-using social_V0._0._1.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- REGISTRAZIONE DEI SERVIZI (Dependency Injection) ---
 
-// Singleton per mantenere lo stato utente tra le pagine
-builder.Services.AddSingleton<SessionService>();
-builder.Services.AddSingleton<PostService>();
-builder.Services.AddSingleton<UtenteService>();
-builder.Services.AddSingleton<AvvisoService>();
+// Scoped: un'istanza per circuito SignalR
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IUtenteService, UtenteService>();
+builder.Services.AddScoped<IAvvisoService, AvvisoService>();
 
 // Componenti Razor interattivi (Server-side) + Radzen
 builder.Services.AddRazorComponents()

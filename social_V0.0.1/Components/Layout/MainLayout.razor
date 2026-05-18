@@ -1,9 +1,11 @@
 ﻿@inherits LayoutComponentBase
 @using Radzen.Blazor
-@using social_V0._0._1.Services
 @using social_V0._0._1.Utils
 @inject NavigationManager NavManager
-@inject SessionService Session
+@rendermode InteractiveServer
+@inject ISessionService Session
+@inject IJSRuntime JS
+@inject IUtenteService UtenteSvc
 
 @* Inizializzazione dei servizi JS necessari per i componenti Radzen *@
 <RadzenComponents @rendermode="InteractiveServer" />
@@ -50,3 +52,35 @@
     </div>
 
 </div>
+
+@code {
+    private bool _needsCookieRestore;
+
+    protected override void OnInitialized()
+    {
+        if (Session.UtenteLoggato == null)
+            _needsCookieRestore = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && _needsCookieRestore)
+        {
+            _needsCookieRestore = false;
+            var userIdStr = await JS.InvokeAsync<string>("getCookie", "userId");
+            if (!string.IsNullOrEmpty(userIdStr) && int.TryParse(userIdStr, out var userId))
+            {
+                var utente = await UtenteSvc.GetUtenteByIdAsync(userId);
+                if (utente != null)
+                {
+                    Session.Login(utente);
+                    var uri = NavManager.Uri;
+                    if (uri == "/" || uri == "/login")
+                        NavManager.NavigateTo("/home");
+                    else
+                        StateHasChanged();
+                }
+            }
+        }
+    }
+}

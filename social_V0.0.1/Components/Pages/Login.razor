@@ -1,9 +1,9 @@
 @page "/"
 @page "/login"
-@using social_V0._0._1.Services
-@inject UtenteService UtenteSvc
+@inject IUtenteService UtenteSvc
 @inject NavigationManager NavManager
-@inject SessionService Session
+@inject ISessionService Session
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 
 <PageTitle>Login</PageTitle>
@@ -136,7 +136,8 @@
             if (utente != null)
             {
                 Session.Login(utente);
-                NavManager.NavigateTo("/home", forceLoad: true);
+                try { await JS.InvokeVoidAsync("setCookie", "userId", utente.UtenteId.ToString()); } catch { }
+                NavManager.NavigateTo("/home");
             }
             else
             {
